@@ -13,11 +13,18 @@ class DatabaseConfig {
         @Value("\${spring.datasource.url}") url: String,
     ): DataSource =
         SQLiteDataSource().apply {
+            val path = url.removePrefix("jdbc:sqlite:")
+            val isFileDb = !path.startsWith(":") && !path.startsWith("file:")
+            if (isFileDb) {
+                java.io.File(path).parentFile?.mkdirs()
+            }
             this.url = url
             config.apply {
-                setBusyTimeout(5000)
-                setJournalMode("WAL")
-                setSynchronous("NORMAL")
+                busyTimeout = 5000
+                if (isFileDb) {
+                    setJournalMode("WAL")
+                    setSynchronous("NORMAL")
+                }
             }
         }
 }

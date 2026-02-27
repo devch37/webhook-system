@@ -18,7 +18,10 @@ import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = ["webhook.secret=test-webhook-secret-key-at-least-32"],
+)
 @ActiveProfiles("test")
 class WebhookServiceSpec : DescribeSpec() {
     @Autowired lateinit var webhookService: WebhookService

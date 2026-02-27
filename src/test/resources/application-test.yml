@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:sqlite::memory:?cache=shared&mode=memory
+    url: jdbc:sqlite:./build/test-webhook.db
     driver-class-name: org.sqlite.JDBC
   sql:
     init:

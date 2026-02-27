@@ -237,3 +237,10 @@ agents/security-agent.md 파일을 읽고 체크리스트 항목을 전부 검�
 **빌드 결과:**
 - `./gradlew test` BUILD SUCCESSFUL
 - `./gradlew jacocoTestCoverageVerification` BUILD SUCCESSFUL (80% 이상 유지)
+
+## #10 ./data/webhook.db 파일 확인 (2026-02-27)
+
+**프롬프트:**
+```
+혹시 ./data/webhook.db 파일이 제대로 생성 되지 않은것 같아서 확인 좀 해줘 ! 어플리케이션이 한번에 구동 될 수 있도록 꼼꼼이 확인해 주었으면 좋겠어 !   
+```

@@ -22,7 +22,10 @@ import javax.crypto.spec.SecretKeySpec
  * it { ... } 블록은 등록만 되고 실행은 Spring 주입 완료 후이므로
  * @Autowired / @LocalServerPort 필드는 실행 시점에 정상 참조됨.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = ["webhook.secret=test-webhook-secret-key-at-least-32"],
+)
 @ActiveProfiles("test")
 abstract class BaseIntegrationSpec(
     body: BaseIntegrationSpec.() -> Unit,
