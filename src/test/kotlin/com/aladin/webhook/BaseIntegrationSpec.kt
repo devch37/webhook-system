@@ -24,21 +24,24 @@ import javax.crypto.spec.SecretKeySpec
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-abstract class BaseIntegrationSpec(body: BaseIntegrationSpec.() -> Unit) : DescribeSpec() {
-
+abstract class BaseIntegrationSpec(
+    body: BaseIntegrationSpec.() -> Unit,
+) : DescribeSpec() {
     @Autowired lateinit var restTemplate: TestRestTemplate
+
     @LocalServerPort var port: Int = 0
 
     val secret = "test-webhook-secret-key-at-least-32"
 
     init {
-        body()  // DescribeSpec DSL 등록: this == BaseIntegrationSpec 인스턴스
+        body() // DescribeSpec DSL 등록: this == BaseIntegrationSpec 인스턴스
     }
 
     fun sign(body: String): String {
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
-        return mac.doFinal(body.toByteArray(Charsets.UTF_8))
+        return mac
+            .doFinal(body.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
     }
 
@@ -47,7 +50,7 @@ abstract class BaseIntegrationSpec(body: BaseIntegrationSpec.() -> Unit) : Descr
         eventType: String,
         data: Map<String, Any> = emptyMap(),
     ) = ObjectMapper().writeValueAsString(
-        mapOf("accountKey" to accountKey, "eventType" to eventType, "data" to data)
+        mapOf("accountKey" to accountKey, "eventType" to eventType, "data" to data),
     )
 
     fun postWebhook(
@@ -55,14 +58,17 @@ abstract class BaseIntegrationSpec(body: BaseIntegrationSpec.() -> Unit) : Descr
         body: String,
         sig: String? = null,
     ): ResponseEntity<Map<*, *>> {
-        val headers = HttpHeaders().apply {
-            contentType = MediaType.APPLICATION_JSON
-            set("X-Signature", sig ?: sign(body))
-            set("X-Event-Id", eventId)
-        }
+        val headers =
+            HttpHeaders().apply {
+                contentType = MediaType.APPLICATION_JSON
+                set("X-Signature", sig ?: sign(body))
+                set("X-Event-Id", eventId)
+            }
         return restTemplate.exchange(
             "http://localhost:$port/webhooks/account-changes",
-            HttpMethod.POST, HttpEntity(body, headers), Map::class.java
+            HttpMethod.POST,
+            HttpEntity(body, headers),
+            Map::class.java,
         )
     }
 }

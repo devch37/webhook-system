@@ -10,8 +10,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
-class AccountService(private val accountRepository: AccountRepository) {
-
+class AccountService(
+    private val accountRepository: AccountRepository,
+) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun findAccount(accountKey: String): Account =
@@ -20,12 +21,13 @@ class AccountService(private val accountRepository: AccountRepository) {
 
     fun process(request: WebhookRequest) {
         require(request.accountKey.length <= 255) { "accountKey too long" }
-        accountRepository.upsert(request.accountKey)  // 계정 없으면 생성
+        accountRepository.upsert(request.accountKey) // 계정 없으면 생성
 
         when (EventType.from(request.eventType)) {
             EventType.EMAIL_FORWARDING_CHANGED -> {
-                val email = request.data["email"] as? String
-                    ?: throw IllegalArgumentException("data.email required")
+                val email =
+                    request.data["email"] as? String
+                        ?: throw IllegalArgumentException("data.email required")
                 require(email.matches(Regex("^[^@]+@[^@]+\\.[^@]+$"))) { "Invalid email format" }
                 accountRepository.updateEmail(request.accountKey, email)
                 log.info("Email updated. accountKey={}", request.accountKey)

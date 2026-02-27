@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/accounts")
-class AccountController(private val accountService: AccountService) {
-
+class AccountController(
+    private val accountService: AccountService,
+) {
     @GetMapping("/{accountKey}")
-    fun getAccount(@PathVariable accountKey: String): ResponseEntity<AccountResponse> {
+    fun getAccount(
+        @PathVariable accountKey: String,
+    ): ResponseEntity<AccountResponse> {
         val account = accountService.findAccount(accountKey)
         return ResponseEntity.ok(account.toResponse())
     }

@@ -18,10 +18,12 @@ import java.util.concurrent.locks.ReentrantLock
  */
 @Component
 class IdempotencyLockManager {
-
     private val locks = ConcurrentHashMap<String, ReentrantLock>()
 
-    fun <T> withLock(eventId: String, block: () -> T): T {
+    fun <T> withLock(
+        eventId: String,
+        block: () -> T,
+    ): T {
         val lock = locks.computeIfAbsent(eventId) { ReentrantLock() }
         return try {
             check(lock.tryLock(3, TimeUnit.SECONDS)) {
@@ -30,7 +32,7 @@ class IdempotencyLockManager {
             block()
         } finally {
             if (lock.isHeldByCurrentThread) lock.unlock()
-            locks.remove(eventId, lock)  // 메모리 누수 방지
+            locks.remove(eventId, lock) // 메모리 누수 방지
         }
     }
 }

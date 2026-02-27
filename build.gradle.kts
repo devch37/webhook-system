@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring") version "2.1.0"
     id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
+    id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
     jacoco
 }
 
@@ -38,10 +39,17 @@ tasks.withType<Test> { useJUnitPlatform() }
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
-    reports { xml.required = true; html.required = true }
-    classDirectories.setFrom(files(classDirectories.files.map {
-        fileTree(it) { exclude("**/domain/**", "**/config/**", "**/*Application*") }
-    }))
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) { exclude("**/domain/**", "**/config/**", "**/*Application*") }
+            },
+        ),
+    )
 }
 
 tasks.jacocoTestCoverageVerification {

@@ -21,8 +21,8 @@ import javax.crypto.spec.SecretKeySpec
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class WebhookServiceSpec : DescribeSpec() {
-
     @Autowired lateinit var webhookService: WebhookService
+
     @Autowired lateinit var eventRepository: WebhookEventRepository
 
     private val secret = "test-webhook-secret-key-at-least-32"
@@ -64,10 +64,15 @@ class WebhookServiceSpec : DescribeSpec() {
             it("빈 시크릿 → IllegalStateException") {
                 val mockRepo = Mockito.mock(WebhookEventRepository::class.java)
                 val mockAccSvc = Mockito.mock(AccountService::class.java)
-                val service = WebhookService(
-                    HmacVerifier(), IdempotencyLockManager(), mockRepo, mockAccSvc,
-                    ObjectMapper(), ""
-                )
+                val service =
+                    WebhookService(
+                        HmacVerifier(),
+                        IdempotencyLockManager(),
+                        mockRepo,
+                        mockAccSvc,
+                        ObjectMapper(),
+                        "",
+                    )
                 shouldThrow<IllegalStateException> { service.validateConfig() }
             }
         }

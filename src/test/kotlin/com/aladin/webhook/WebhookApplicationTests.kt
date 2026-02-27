@@ -6,6 +6,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
 @ActiveProfiles("test")
-class WebhookApplicationTests : StringSpec({
-    "context loads" {}
-})
+class WebhookApplicationTests :
+    StringSpec({
+        "context loads" {}
+    })

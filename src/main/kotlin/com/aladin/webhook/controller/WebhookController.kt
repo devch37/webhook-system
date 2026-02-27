@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/webhooks")
-class WebhookController(private val webhookService: WebhookService) {
-
+class WebhookController(
+    private val webhookService: WebhookService,
+) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @PostMapping("/account-changes")

@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/inbox")
-class InboxController(private val webhookService: WebhookService) {
-
+class InboxController(
+    private val webhookService: WebhookService,
+) {
     @GetMapping("/events/{eventId}")
-    fun getEvent(@PathVariable eventId: String): ResponseEntity<EventResponse> {
+    fun getEvent(
+        @PathVariable eventId: String,
+    ): ResponseEntity<EventResponse> {
         val event = webhookService.findEvent(eventId)
         return ResponseEntity.ok(event.toResponse())
     }

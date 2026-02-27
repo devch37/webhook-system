@@ -45,7 +45,11 @@ class WebhookService(
      * 5. RECEIVED → PROCESSING → DONE | FAILED 상태 전이
      */
     @Transactional
-    fun handle(signature: String, eventId: String, rawBody: String): WebhookResult {
+    fun handle(
+        signature: String,
+        eventId: String,
+        rawBody: String,
+    ): WebhookResult {
         validateHeaders(eventId)
 
         if (!hmacVerifier.verify(rawBody, signature, secret)) {
@@ -58,7 +62,10 @@ class WebhookService(
         }
     }
 
-    private fun processWithIdempotency(eventId: String, rawBody: String): WebhookResult {
+    private fun processWithIdempotency(
+        eventId: String,
+        rawBody: String,
+    ): WebhookResult {
         val request = parseRequest(rawBody)
 
         val isNew = eventRepository.insertIfNotExists(eventId, request.eventType, rawBody)
@@ -66,10 +73,10 @@ class WebhookService(
             val existing = eventRepository.findByEventId(eventId)
             log.info("Duplicate event. eventId={}, status={}", eventId, existing?.status)
             return when (existing?.status) {
-                EventStatus.DONE       -> WebhookResult.AlreadyProcessed("이미 처리됨")
+                EventStatus.DONE -> WebhookResult.AlreadyProcessed("이미 처리됨")
                 EventStatus.PROCESSING -> WebhookResult.Processing("처리 중")
-                EventStatus.FAILED     -> WebhookResult.AlreadyProcessed("이미 처리됨 (실패)")
-                else                   -> WebhookResult.AlreadyProcessed("이미 처리됨")
+                EventStatus.FAILED -> WebhookResult.AlreadyProcessed("이미 처리됨 (실패)")
+                else -> WebhookResult.AlreadyProcessed("이미 처리됨")
             }
         }
 
