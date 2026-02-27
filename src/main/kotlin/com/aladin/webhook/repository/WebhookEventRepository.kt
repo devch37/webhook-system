@@ -1,7 +1,7 @@
 package com.aladin.webhook.repository
 
-import com.aladin.webhook.domain.EventStatus
 import com.aladin.webhook.domain.WebhookEvent
+import com.aladin.webhook.domain.enum.EventStatus
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Repository

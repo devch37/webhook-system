@@ -1,9 +1,9 @@
 package com.aladin.webhook.service
 
 import com.aladin.webhook.domain.Account
-import com.aladin.webhook.domain.AccountStatus
-import com.aladin.webhook.domain.EventType
 import com.aladin.webhook.domain.dto.WebhookRequest
+import com.aladin.webhook.domain.enum.AccountStatus
+import com.aladin.webhook.domain.enum.EventType
 import com.aladin.webhook.domain.exception.NotFoundException
 import com.aladin.webhook.repository.AccountRepository
 import org.slf4j.LoggerFactory

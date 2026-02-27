@@ -1,7 +1,7 @@
 package com.aladin.webhook.repository
 
 import com.aladin.webhook.domain.Account
-import com.aladin.webhook.domain.AccountStatus
+import com.aladin.webhook.domain.enum.AccountStatus
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Repository

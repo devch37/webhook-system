@@ -142,12 +142,12 @@ claude "현재 코드에서 Controller → Repository 직접 호출하는 부분
 
 ```bash
 # 서버 실행
-WEBHOOK_SECRET=my-secret ./gradlew bootRun
+./gradlew bootRun
 
 # 서명 생성 (Python)
 python3 -c "
 import hmac, hashlib, json
-secret = 'my-secret'
+secret = 'your-secret-key-replace-this-value'
 body = json.dumps({'accountKey':'user_001','eventType':'ACCOUNT_DELETED','data':{}}, separators=(',',':'))
 sig = hmac.new(secret.encode(), body.encode(), hashlib.sha256).hexdigest()
 print('Body:', body)

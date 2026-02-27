@@ -1,9 +1,9 @@
 package com.aladin.webhook.service
 
-import com.aladin.webhook.domain.EventStatus
 import com.aladin.webhook.domain.WebhookEvent
 import com.aladin.webhook.domain.dto.WebhookRequest
 import com.aladin.webhook.domain.dto.WebhookResult
+import com.aladin.webhook.domain.enum.EventStatus
 import com.aladin.webhook.domain.exception.NotFoundException
 import com.aladin.webhook.domain.exception.SignatureVerificationException
 import com.aladin.webhook.repository.WebhookEventRepository

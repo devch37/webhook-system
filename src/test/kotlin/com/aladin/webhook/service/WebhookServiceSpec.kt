@@ -1,7 +1,7 @@
 package com.aladin.webhook.service
 
-import com.aladin.webhook.domain.EventStatus
 import com.aladin.webhook.domain.dto.WebhookResult
+import com.aladin.webhook.domain.enum.EventStatus
 import com.aladin.webhook.repository.WebhookEventRepository
 import com.aladin.webhook.util.HmacVerifier
 import com.aladin.webhook.util.IdempotencyLockManager

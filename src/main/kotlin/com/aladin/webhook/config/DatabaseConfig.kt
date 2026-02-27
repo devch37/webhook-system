@@ -16,7 +16,10 @@ class DatabaseConfig {
             val path = url.removePrefix("jdbc:sqlite:")
             val isFileDb = !path.startsWith(":") && !path.startsWith("file:")
             if (isFileDb) {
-                java.io.File(path).parentFile?.mkdirs()
+                java.io
+                    .File(path)
+                    .parentFile
+                    ?.mkdirs()
             }
             this.url = url
             config.apply {
