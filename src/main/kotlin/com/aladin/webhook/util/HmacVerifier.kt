@@ -21,8 +21,8 @@ class HmacVerifier {
         secret: String,
     ): Boolean =
         runCatching {
-            val mac = Mac.getInstance("HmacSHA256")
-            mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+            val mac = Mac.getInstance(HMAC_SHA256_ALGORITHM)
+            mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), HMAC_SHA256_ALGORITHM))
             val expected =
                 mac
                     .doFinal(payload.toByteArray(Charsets.UTF_8))
@@ -33,4 +33,8 @@ class HmacVerifier {
             )
         }.onFailure { log.warn("HMAC verification error: ${it.message}") }
             .getOrDefault(false)
+
+    companion object {
+        private const val HMAC_SHA256_ALGORITHM = "HmacSHA256"
+    }
 }
