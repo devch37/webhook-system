@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:sqlite::memory:?cache=shared&mode=memory
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+webhook:
+  secret: test-webhook-secret-key-at-least-32
+server:
+  port: 0
