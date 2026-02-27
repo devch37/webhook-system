@@ -1,3 +1,27 @@
 spring:
   application:
     name: webhook
+  datasource:
+    url: jdbc:sqlite:${DB_PATH:./data/webhook.db}
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  servlet:
+    multipart:
+      max-request-size: 1MB
+      max-file-size: 1MB
+  web:
+    resources:
+      add-mappings: false
+
+webhook:
+  secret: ${WEBHOOK_SECRET}
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
