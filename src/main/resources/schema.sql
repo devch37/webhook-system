@@ -1,16 +1,19 @@
 PRAGMA foreign_keys=ON;
 
-CREATE TABLE IF NOT EXISTS accounts (
+DROP TABLE accounts;
+DROP TABLE webhook_events;
+
+CREATE TABLE accounts (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     account_key  TEXT    NOT NULL UNIQUE,
     email        TEXT,
     status       TEXT    NOT NULL DEFAULT 'ACTIVE'
                          CHECK(status IN ('ACTIVE','DELETED','APPLE_DELETED')),
-    created_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-    updated_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS webhook_events (
+CREATE TABLE webhook_events (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id      TEXT    NOT NULL UNIQUE,
     event_type    TEXT    NOT NULL,
@@ -18,8 +21,8 @@ CREATE TABLE IF NOT EXISTS webhook_events (
     status        TEXT    NOT NULL DEFAULT 'RECEIVED'
                           CHECK(status IN ('RECEIVED','PROCESSING','DONE','FAILED')),
     error_message TEXT,
-    created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-    updated_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_webhook_events_status ON webhook_events(status);

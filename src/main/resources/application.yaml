@@ -4,6 +4,12 @@ spring:
   datasource:
     url: jdbc:sqlite:${DB_PATH:./data/webhook.db}
     driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    show-sql: false
   sql:
     init:
       mode: always

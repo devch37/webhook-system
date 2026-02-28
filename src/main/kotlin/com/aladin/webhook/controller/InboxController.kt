@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/inbox")
@@ -27,8 +28,8 @@ data class EventResponse(
     val eventType: String,
     val status: String,
     val errorMessage: String?,
-    val createdAt: String,
-    val updatedAt: String,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
 )
 
 fun WebhookEvent.toResponse() = EventResponse(eventId, eventType, status.name, errorMessage, createdAt, updatedAt)

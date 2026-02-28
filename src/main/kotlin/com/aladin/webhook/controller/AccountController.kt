@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/accounts")
@@ -26,8 +27,8 @@ data class AccountResponse(
     val accountKey: String,
     val email: String?,
     val status: String,
-    val createdAt: String,
-    val updatedAt: String,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
 )
 
 fun Account.toResponse() = AccountResponse(accountKey, email, status.name, createdAt, updatedAt)

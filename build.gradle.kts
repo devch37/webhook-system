@@ -1,10 +1,18 @@
 plugins {
     kotlin("jvm") version "2.1.0"
     kotlin("plugin.spring") version "2.1.0"
+    kotlin("plugin.jpa") version "2.1.0"
+    kotlin("plugin.allopen") version "2.1.0"
     id("org.springframework.boot") version "3.5.0"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
     jacoco
+}
+
+allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
 }
 
 group = "com.aladin"
@@ -24,7 +32,8 @@ kotlin {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.hibernate.orm:hibernate-community-dialects")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.xerial:sqlite-jdbc:3.47.1.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect")

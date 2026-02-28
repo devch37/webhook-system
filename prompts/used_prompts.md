@@ -1,10 +1,10 @@
-# 사용한 AI 프롬프트 기록
-> Layered Architecture + 분산 환경 고려 설계
-
+# #1 사용한 AI 프롬프트 기록 및 프로젝트 설계
+> Layered Architecture + 분산 환경 및 API 보안 고려 설계
+> PDF 파일 내용 분석 후 어떤 서브 agent 를 사용하면 좋을 지 추천해줘 ! 보안도 신경 써서 PDF 파일 내용을 상세히 잘 분석해 줘 !
+> 각 서브 agent 들을 어떤 플로우로 실행하면 좋을 지도 추천해 줘 !
 ---
 
-## #2 DB 레이어 구현 (2026-02-27)
-
+## #2 DB 레이어 구현
 **프롬프트:**
 ```
 agents/db-agent.md 파일을 읽고 지시대로 구현해줘.
@@ -29,7 +29,7 @@ WebhookEventRepository.kt, AccountRepository.kt 생성.
 
 ---
 
-## #3 Business 레이어 구현 (2026-02-27)
+## #3 Business 레이어 구현
 
 **프롬프트:**
 ```
@@ -53,7 +53,7 @@ HTTP 코드 0줄.
 
 ---
 
-## #4 API 레이어 구현 (2026-02-27)
+## #4 API 레이어 구현
 
 **프롬프트:**
 ```
@@ -76,7 +76,7 @@ Controller에 비즈니스 로직 0줄.
 
 ---
 
-## #5 테스트 레이어 구현 (2026-02-27)
+## #5 테스트 레이어 구현
 
 **프롬프트:**
 ```
@@ -105,7 +105,7 @@ application-test.yml 생성.
 
 ---
 
-## #6 빌드 최종 확인 (2026-02-27)
+## #6 빌드 최종 확인
 
 **프롬프트:**
 ```
@@ -121,7 +121,7 @@ application-test.yml 생성.
 
 ---
 
-## #7 테스트 커버리지 80% 달성 (2026-02-27)
+## #7 테스트 커버리지 80% 달성
 
 **프롬프트:**
 ```
@@ -162,7 +162,7 @@ application-test.yml 생성.
 
 ---
 
-## #8 README.md 작성 (2026-02-27)
+## #8 README.md 작성
 
 **프롬프트:**
 ```
@@ -185,7 +185,7 @@ README.md 작성해줘. 포함 내용:
 
 ---
 
-## #9 보안 검토 및 수정 (2026-02-27)
+## #9 보안 검토 및 수정
 
 **프롬프트:**
 ```
@@ -238,9 +238,40 @@ agents/security-agent.md 파일을 읽고 체크리스트 항목을 전부 검�
 - `./gradlew test` BUILD SUCCESSFUL
 - `./gradlew jacocoTestCoverageVerification` BUILD SUCCESSFUL (80% 이상 유지)
 
-## #10 ./data/webhook.db 파일 확인 (2026-02-27)
+## #10 ./data/webhook.db 파일 확인
 
 **프롬프트:**
 ```
 혹시 ./data/webhook.db 파일이 제대로 생성 되지 않은것 같아서 확인 좀 해줘 ! 어플리케이션이 한번에 구동 될 수 있도록 꼼꼼이 확인해 주었으면 좋겠어 !   
 ```
+
+## #11 JdbcTemplate ORM JPA 로 변경
+
+**프롬프트:**
+```
+혹시 지금 db access layer 가 JdbcTemplate 을 되어 있는데 혹시 ORM Jpa 로 변경해 줄 수 있을까 ? JdbcTemplate 생 쿼리 이용하는것 보다는 ORM 을 사용하는게 나을 것 같아서 !
+```
+
+## #12 sqlite ON UPDATE 확인 요청
+
+**프롬프트:**
+```
+혹시 sqlite 는 mysql ON UPDATE 처럼 어떤 특정 컬럼이 업데이트 되었을 때 자동으로 update 되는 기능은 없을까 ?
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
