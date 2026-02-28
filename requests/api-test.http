@@ -1,0 +1,390 @@
+### ════════════════════════════════════════════════════════
+### Webhook 처리 서버 - 전체 API 테스트
+###
+### 도구: IntelliJ IDEA HTTP Client (2022.3+) 권장
+###
+### 서버 실행:
+###   WEBHOOK_SECRET=your-secret-key-replace-this-value \
+###   ./gradlew bootRun
+###
+### 환경 선택: http-client.env.json → "local" 프로파일
+###
+### 실행 순서 권장:
+###   Section 1 → Section 2 → Section 3 → Section 4 → Section 5
+### ════════════════════════════════════════════════════════
+
+
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+### Section 1.  POST /webhooks/account-changes - 정상 케이스
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+### 1-1. EMAIL_FORWARDING_CHANGED - 이메일 갱신
+###      기대: 200 OK  {"message": "처리됨"}
+< {%
+    const body = '{"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+# @name emailChangedOk
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("message = 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+%}
+
+###
+
+### 1-2. ACCOUNT_DELETED - 계정 삭제
+###      기대: 200 OK  {"message": "처리됨"}
+< {%
+    const body = '{"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+# @name accountDeletedOk
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("message = 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+%}
+
+###
+
+### 1-3. APPLE_ACCOUNT_DELETED - Apple 계정 삭제
+###      기대: 200 OK  {"message": "처리됨"}
+< {%
+    const body = '{"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+# @name appleDeletedOk
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("message = 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+%}
+
+
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+### Section 2.  POST /webhooks/account-changes - 오류 케이스
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+### 2-1. 잘못된 서명
+###      기대: 401 Unauthorized  {"code": "UNAUTHORIZED"}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: 0000000000000000000000000000000000000000000000000000000000000000
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("401 Unauthorized", () => client.assert(response.status === 401, `status: ${response.status}`));
+    client.test("code = UNAUTHORIZED", () => client.assert(response.body.code === "UNAUTHORIZED", JSON.stringify(response.body)));
+%}
+
+###
+
+### 2-2. X-Event-Id 헤더 누락
+###      기대: 400 Bad Request  {"code": "MISSING_HEADER"}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: dummysig
+
+{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("400 Bad Request", () => client.assert(response.status === 400, `status: ${response.status}`));
+%}
+
+###
+
+### 2-3. X-Signature 헤더 누락
+###      기대: 400 Bad Request  {"code": "MISSING_HEADER"}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("400 Bad Request", () => client.assert(response.status === 400, `status: ${response.status}`));
+%}
+
+###
+
+### 2-4. 잘못된 JSON 바디 (서명은 유효)
+###      기대: 400 Bad Request  {"code": "BAD_REQUEST"}
+< {%
+    const body = 'this is not valid json!!!';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: {{$uuid}}
+
+this is not valid json!!!
+
+> {%
+    client.test("400 Bad Request", () => client.assert(response.status === 400, `status: ${response.status}`));
+    client.test("code = BAD_REQUEST", () => client.assert(response.body.code === "BAD_REQUEST", JSON.stringify(response.body)));
+%}
+
+###
+
+### 2-5. eventId 에 특수문자 포함 (허용 문자: a-z A-Z 0-9 - _)
+###      기대: 400 Bad Request
+< {%
+    const body = '{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: invalid@event#id!
+
+{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("400 Bad Request", () => client.assert(response.status === 400, `status: ${response.status}`));
+%}
+
+###
+
+### 2-6. EMAIL_FORWARDING_CHANGED - data.email 필드 누락 → FAILED 기록
+###      기대: 200 OK  (처리됨 응답, 이벤트는 FAILED 상태로 저장)
+###      ※ evt-fail-email-001 은 Section 3 / Section 5 에서 재사용
+< {%
+    const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+# @name emailMissingFail
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: evt-fail-email-001
+
+{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}
+
+> {%
+    client.test("200 OK (처리됨 반환)", () => client.assert(response.status === 200, `status: ${response.status}`));
+%}
+
+###
+
+### 2-7. 알 수 없는 eventType → FAILED 기록
+###      기대: 200 OK  (처리됨 응답, 이벤트는 FAILED 상태로 저장)
+###      ※ evt-fail-unknown-001 은 Section 5 에서 재사용
+< {%
+    const body = '{"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+# @name unknownEventFail
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: evt-fail-unknown-001
+
+{"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}
+
+> {%
+    client.test("200 OK (처리됨 반환)", () => client.assert(response.status === 200, `status: ${response.status}`));
+%}
+
+
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+### Section 3.  Idempotency - 중복 · 재전송 처리
+###
+###   고정 eventId 를 사용하므로 DB 가 초기화된 상태에서 실행하세요.
+###   3-1 → 3-2 순서로 실행해야 올바른 결과가 나옵니다.
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+### 3-1. 최초 전송 → DONE 상태로 처리
+###      기대: 200 OK  {"message": "처리됨"}
+< {%
+    const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: evt-idem-001
+
+{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("200 OK - 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+%}
+
+###
+
+### 3-2. 동일 eventId 재전송 (evt-idem-001, DONE)
+###      기대: 200 OK  {"message": "이미 처리됨"}
+< {%
+    const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: evt-idem-001
+
+{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("200 OK - 이미 처리됨", () => client.assert(response.body.message === "이미 처리됨", JSON.stringify(response.body)));
+%}
+
+###
+
+### 3-3. 실패 이벤트 재전송 (evt-fail-email-001, FAILED)
+###      기대: 200 OK  {"message": "이미 처리됨 (실패)"}
+###      ※ Section 2-6 을 먼저 실행해야 함
+< {%
+    const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
+    const secret = request.environment.get("WEBHOOK_SECRET");
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+%}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Event-Id: evt-fail-email-001
+
+{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}
+
+> {%
+    client.test("200 OK - 이미 처리됨 (실패)", () => client.assert(response.body.message === "이미 처리됨 (실패)", JSON.stringify(response.body)));
+%}
+
+
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+### Section 4.  GET /accounts/{accountKey} - 계정 조회
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+### 4-1. 이메일이 갱신된 계정 조회
+###      기대: 200 OK  email = updated@example.com, status = ACTIVE
+###      ※ Section 1-1 선행 필요
+GET {{baseUrl}}/accounts/user_email_01
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("email 갱신됨", () => client.assert(response.body.email === "updated@example.com", JSON.stringify(response.body)));
+    client.test("status = ACTIVE", () => client.assert(response.body.status === "ACTIVE", JSON.stringify(response.body)));
+    client.test("accountKey 일치", () => client.assert(response.body.accountKey === "user_email_01", JSON.stringify(response.body)));
+    client.test("updatedAt 존재", () => client.assert(response.body.updatedAt !== null, JSON.stringify(response.body)));
+%}
+
+###
+
+### 4-2. ACCOUNT_DELETED 된 계정 조회
+###      기대: 200 OK  status = DELETED
+###      ※ Section 1-2 선행 필요
+GET {{baseUrl}}/accounts/user_deleted_01
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("status = DELETED", () => client.assert(response.body.status === "DELETED", JSON.stringify(response.body)));
+%}
+
+###
+
+### 4-3. APPLE_ACCOUNT_DELETED 된 계정 조회
+###      기대: 200 OK  status = APPLE_DELETED
+###      ※ Section 1-3 선행 필요
+GET {{baseUrl}}/accounts/user_apple_01
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("status = APPLE_DELETED", () => client.assert(response.body.status === "APPLE_DELETED", JSON.stringify(response.body)));
+%}
+
+###
+
+### 4-4. 존재하지 않는 계정 조회
+###      기대: 404 Not Found  {"code": "NOT_FOUND"}
+GET {{baseUrl}}/accounts/nonexistent-account-key
+
+> {%
+    client.test("404 Not Found", () => client.assert(response.status === 404, `status: ${response.status}`));
+    client.test("code = NOT_FOUND", () => client.assert(response.body.code === "NOT_FOUND", JSON.stringify(response.body)));
+%}
+
+
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+### Section 5.  GET /inbox/events/{eventId} - 이벤트 조회
+### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
+
+### 5-1. 정상 처리된 이벤트 조회 (DONE)
+###      기대: 200 OK  status = DONE, errorMessage = null
+###      ※ Section 3-1 선행 필요 (evt-idem-001)
+GET {{baseUrl}}/inbox/events/evt-idem-001
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("status = DONE", () => client.assert(response.body.status === "DONE", JSON.stringify(response.body)));
+    client.test("eventId 일치", () => client.assert(response.body.eventId === "evt-idem-001", JSON.stringify(response.body)));
+    client.test("errorMessage = null", () => client.assert(response.body.errorMessage === null, JSON.stringify(response.body)));
+    client.test("updatedAt 존재", () => client.assert(response.body.updatedAt !== null, JSON.stringify(response.body)));
+%}
+
+###
+
+### 5-2. 실패한 이벤트 조회 - email 누락 (FAILED)
+###      기대: 200 OK  status = FAILED, errorMessage 있음
+###      ※ Section 2-6 선행 필요 (evt-fail-email-001)
+GET {{baseUrl}}/inbox/events/evt-fail-email-001
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("status = FAILED", () => client.assert(response.body.status === "FAILED", JSON.stringify(response.body)));
+    client.test("errorMessage 있음", () => client.assert(response.body.errorMessage !== null, JSON.stringify(response.body)));
+%}
+
+###
+
+### 5-3. 실패한 이벤트 조회 - 알 수 없는 타입 (FAILED)
+###      기대: 200 OK  status = FAILED
+###      ※ Section 2-7 선행 필요 (evt-fail-unknown-001)
+GET {{baseUrl}}/inbox/events/evt-fail-unknown-001
+
+> {%
+    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("status = FAILED", () => client.assert(response.body.status === "FAILED", JSON.stringify(response.body)));
+    client.test("errorMessage 있음", () => client.assert(response.body.errorMessage !== null, JSON.stringify(response.body)));
+%}
+
+###
+
+### 5-4. 존재하지 않는 이벤트 조회
+###      기대: 404 Not Found  {"code": "NOT_FOUND"}
+GET {{baseUrl}}/inbox/events/nonexistent-event-id
+
+> {%
+    client.test("404 Not Found", () => client.assert(response.status === 404, `status: ${response.status}`));
+    client.test("code = NOT_FOUND", () => client.assert(response.body.code === "NOT_FOUND", JSON.stringify(response.body)));
+%}
