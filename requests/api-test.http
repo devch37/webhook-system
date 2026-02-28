@@ -126,7 +126,7 @@ X-Event-Id: {{$uuid}}
 {"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
 
 > {%
-    client.test("400 Bad Request", () => client.assert(response.status === 400, `status: ${response.status}`));
+    client.test("400 Bad Request", () => client.assert(response.status === 401, `status: ${response.status}`));
 %}
 
 ###

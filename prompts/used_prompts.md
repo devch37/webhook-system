@@ -271,7 +271,12 @@ agents/security-agent.md 파일을 읽고 체크리스트 항목을 전부 검�
 혹시 해당 프로젝트의 api 들을 모두 테스트 할 수 있는 request 들을 전부 짜 줄 수 있을까 ? 모든 api 들을 상세히 체크해 보고 싶어서 http request 를 모두  짜 주었으면 좋겠어 ! 
 ```
 
-
+## #15 Webhook Header validation 로직 분리
+**프롬프트**
+```
+근데 webhook header validation 을 할 떄 혹시 어노테이션있는 메서드들만 header 를 검사할 수 있도록 하는 방식은 어떨까 ? aop 를 사용하는것도 좋은 방법일 것 같은데 아니면 더 좋은 구현 방식이나 설계 방식이 있다면 추천해줘도      
+  좋을 것 같아 ! 
+```
 
 
 

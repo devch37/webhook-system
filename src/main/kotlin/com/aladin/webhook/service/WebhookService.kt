@@ -5,9 +5,7 @@ import com.aladin.webhook.domain.dto.WebhookRequest
 import com.aladin.webhook.domain.dto.WebhookResult
 import com.aladin.webhook.domain.enum.EventStatus
 import com.aladin.webhook.domain.exception.NotFoundException
-import com.aladin.webhook.domain.exception.SignatureVerificationException
 import com.aladin.webhook.repository.WebhookEventRepository
-import com.aladin.webhook.util.HmacVerifier
 import com.aladin.webhook.util.IdempotencyLockManager
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.annotation.PostConstruct
@@ -18,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 class WebhookService(
-    private val hmacVerifier: HmacVerifier,
     private val lockManager: IdempotencyLockManager,
     private val eventRepository: WebhookEventRepository,
     private val accountService: AccountService,
@@ -37,30 +34,19 @@ class WebhookService(
     }
 
     /**
-     * 처리 흐름:
-     * 1. 입력 헤더 검증 (길이·문자셋)
-     * 2. HMAC 서명 검증
-     * 3. eventId 키 잠금 (Race Condition 방어)
-     * 4. Idempotency 체크 (DB UNIQUE + 앱 레벨 이중 방어)
-     * 5. RECEIVED → PROCESSING → DONE | FAILED 상태 전이
+     * 처리 흐름 (서명·헤더 검증은 WebhookSignatureAspect 가 @Before 로 선처리):
+     * 1. eventId 키 잠금 (Race Condition 방어)
+     * 2. Idempotency 체크 (DB UNIQUE + 앱 레벨 이중 방어)
+     * 3. RECEIVED → PROCESSING → DONE | FAILED 상태 전이
      */
     @Transactional
     fun handle(
-        signature: String,
         eventId: String,
         rawBody: String,
-    ): WebhookResult {
-        validateHeaders(eventId)
-
-        if (!hmacVerifier.verify(rawBody, signature, secret)) {
-            log.warn("Signature verification failed. eventId={}", eventId)
-            throw SignatureVerificationException("Invalid HMAC signature")
-        }
-
-        return lockManager.withLock(eventId) {
+    ): WebhookResult =
+        lockManager.withLock(eventId) {
             processWithIdempotency(eventId, rawBody)
         }
-    }
 
     private fun processWithIdempotency(
         eventId: String,
@@ -91,14 +77,6 @@ class WebhookService(
             eventRepository.updateFailed(eventId, e.message ?: "Unknown error")
             log.error("Event failed. eventId={}, error={}", eventId, e.message)
             WebhookResult.Accepted("처리됨") // 외부 재전송 루프 방지
-        }
-    }
-
-    private fun validateHeaders(eventId: String) {
-        require(eventId.isNotBlank()) { "eventId must not be blank" }
-        require(eventId.length <= 255) { "eventId too long" }
-        require(eventId.matches(Regex("^[a-zA-Z0-9\\-_]+$"))) {
-            "eventId contains invalid characters"
         }
     }
 
