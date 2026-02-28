@@ -22,7 +22,7 @@
 ###      기대: 200 OK  {"message": "처리됨"}
 < {%
     const body = '{"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 # @name emailChangedOk
@@ -44,7 +44,7 @@ X-Event-Id: {{$uuid}}
 ###      기대: 200 OK  {"message": "처리됨"}
 < {%
     const body = '{"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 # @name accountDeletedOk
@@ -66,7 +66,7 @@ X-Event-Id: {{$uuid}}
 ###      기대: 200 OK  {"message": "처리됨"}
 < {%
     const body = '{"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 # @name appleDeletedOk
@@ -135,7 +135,7 @@ X-Event-Id: {{$uuid}}
 ###      기대: 400 Bad Request  {"code": "BAD_REQUEST"}
 < {%
     const body = 'this is not valid json!!!';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
@@ -156,7 +156,7 @@ this is not valid json!!!
 ###      기대: 400 Bad Request
 < {%
     const body = '{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
@@ -177,7 +177,7 @@ X-Event-Id: invalid@event#id!
 ###      ※ evt-fail-email-001 은 Section 3 / Section 5 에서 재사용
 < {%
     const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 # @name emailMissingFail
@@ -199,7 +199,7 @@ X-Event-Id: evt-fail-email-001
 ###      ※ evt-fail-unknown-001 은 Section 5 에서 재사용
 < {%
     const body = '{"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 # @name unknownEventFail
@@ -226,7 +226,7 @@ X-Event-Id: evt-fail-unknown-001
 ###      기대: 200 OK  {"message": "처리됨"}
 < {%
     const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
@@ -246,7 +246,7 @@ X-Event-Id: evt-idem-001
 ###      기대: 200 OK  {"message": "이미 처리됨"}
 < {%
     const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
@@ -267,7 +267,7 @@ X-Event-Id: evt-idem-001
 ###      ※ Section 2-6 을 먼저 실행해야 함
 < {%
     const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
-    const secret = request.environment.get("WEBHOOK_SECRET");
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
     request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
