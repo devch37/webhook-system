@@ -27,7 +27,7 @@ data class WebhookEvent(
     @Column(nullable = false)
     val status: EventStatus = EventStatus.RECEIVED,
     @Column(name = "error_message")
-    val errorMessage: String?,
+    val errorMessage: String? = null,
     @Column(name = "created_at", insertable = false, updatable = false)
     val createdAt: LocalDateTime = LocalDateTime.now(),
     @UpdateTimestamp

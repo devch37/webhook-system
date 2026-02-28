@@ -1,7 +1,7 @@
 PRAGMA foreign_keys=ON;
 
-DROP TABLE accounts;
-DROP TABLE webhook_events;
+DROP TABLE IF EXISTS accounts;
+DROP TABLE IF EXISTS webhook_events;
 
 CREATE TABLE accounts (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
