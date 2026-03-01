@@ -15,7 +15,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.util.UUID
 
-
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = ["webhook.secret=test-webhook-secret-key-at-least-32"],

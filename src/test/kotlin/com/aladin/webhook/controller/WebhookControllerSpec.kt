@@ -55,7 +55,8 @@ class WebhookControllerSpec :
                 eventually(3.seconds) {
                     restTemplate
                         .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
-                        .body?.get("status") shouldBe "DONE"
+                        .body
+                        ?.get("status") shouldBe "DONE"
                 }
 
                 val res = postWebhook(eventId = eventId, body = body)
@@ -72,7 +73,8 @@ class WebhookControllerSpec :
                 eventually(3.seconds) {
                     restTemplate
                         .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
-                        .body?.get("status") shouldBe "FAILED"
+                        .body
+                        ?.get("status") shouldBe "FAILED"
                 }
 
                 val res = postWebhook(eventId = eventId, body = body)
@@ -96,7 +98,8 @@ class WebhookControllerSpec :
                 eventually(5.seconds) {
                     restTemplate
                         .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
-                        .body?.get("status") shouldBe "DONE"
+                        .body
+                        ?.get("status") shouldBe "DONE"
                 }
             }
         }
@@ -115,7 +118,8 @@ class WebhookControllerSpec :
                 eventually(3.seconds) {
                     restTemplate
                         .getForEntity("http://localhost:$port/accounts/user_email_01", Map::class.java)
-                        .body?.get("email") shouldBe "updated@test.com"
+                        .body
+                        ?.get("email") shouldBe "updated@test.com"
                 }
             }
 
@@ -127,7 +131,8 @@ class WebhookControllerSpec :
                 eventually(3.seconds) {
                     restTemplate
                         .getForEntity("http://localhost:$port/accounts/user_del_01", Map::class.java)
-                        .body?.get("status") shouldBe "DELETED"
+                        .body
+                        ?.get("status") shouldBe "DELETED"
                 }
             }
 
@@ -139,7 +144,8 @@ class WebhookControllerSpec :
                 eventually(3.seconds) {
                     restTemplate
                         .getForEntity("http://localhost:$port/accounts/user_apple_01", Map::class.java)
-                        .body?.get("status") shouldBe "APPLE_DELETED"
+                        .body
+                        ?.get("status") shouldBe "APPLE_DELETED"
                 }
             }
 
