@@ -19,7 +19,7 @@
 ### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 
 ### 1-1. EMAIL_FORWARDING_CHANGED - 이메일 갱신
-###      기대: 200 OK  {"message": "처리됨"}
+###      기대: 202 Accepted  {"message": "수신됨"}
 < {%
     const body = '{"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
@@ -34,14 +34,14 @@ X-Event-Id: {{$uuid}}
 {"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}
 
 > {%
-    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
-    client.test("message = 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+    client.test("202 Accepted", () => client.assert(response.status === 202, `status: ${response.status}`));
+    client.test("message = 수신됨", () => client.assert(response.body.message === "수신됨", JSON.stringify(response.body)));
 %}
 
 ###
 
 ### 1-2. ACCOUNT_DELETED - 계정 삭제
-###      기대: 200 OK  {"message": "처리됨"}
+###      기대: 202 Accepted  {"message": "수신됨"}
 < {%
     const body = '{"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
@@ -56,14 +56,14 @@ X-Event-Id: {{$uuid}}
 {"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}
 
 > {%
-    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
-    client.test("message = 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+    client.test("202 Accepted", () => client.assert(response.status === 202, `status: ${response.status}`));
+    client.test("message = 수신됨", () => client.assert(response.body.message === "수신됨", JSON.stringify(response.body)));
 %}
 
 ###
 
 ### 1-3. APPLE_ACCOUNT_DELETED - Apple 계정 삭제
-###      기대: 200 OK  {"message": "처리됨"}
+###      기대: 202 Accepted  {"message": "수신됨"}
 < {%
     const body = '{"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
@@ -78,8 +78,8 @@ X-Event-Id: {{$uuid}}
 {"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}
 
 > {%
-    client.test("200 OK", () => client.assert(response.status === 200, `status: ${response.status}`));
-    client.test("message = 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+    client.test("202 Accepted", () => client.assert(response.status === 202, `status: ${response.status}`));
+    client.test("message = 수신됨", () => client.assert(response.body.message === "수신됨", JSON.stringify(response.body)));
 %}
 
 
@@ -173,7 +173,7 @@ X-Event-Id: invalid@event#id!
 ###
 
 ### 2-6. EMAIL_FORWARDING_CHANGED - data.email 필드 누락 → FAILED 기록
-###      기대: 200 OK  (처리됨 응답, 이벤트는 FAILED 상태로 저장)
+###      기대: 202 Accepted (수신됨 응답, 비동기 처리 후 이벤트는 FAILED 상태로 저장)
 ###      ※ evt-fail-email-001 은 Section 3 / Section 5 에서 재사용
 < {%
     const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
@@ -189,13 +189,13 @@ X-Event-Id: evt-fail-email-001
 {"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}
 
 > {%
-    client.test("200 OK (처리됨 반환)", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("202 Accepted (수신됨 반환)", () => client.assert(response.status === 202, `status: ${response.status}`));
 %}
 
 ###
 
 ### 2-7. 알 수 없는 eventType → FAILED 기록
-###      기대: 200 OK  (처리됨 응답, 이벤트는 FAILED 상태로 저장)
+###      기대: 202 Accepted (수신됨 응답, 비동기 처리 후 이벤트는 FAILED 상태로 저장)
 ###      ※ evt-fail-unknown-001 은 Section 5 에서 재사용
 < {%
     const body = '{"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}';
@@ -211,7 +211,7 @@ X-Event-Id: evt-fail-unknown-001
 {"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}
 
 > {%
-    client.test("200 OK (처리됨 반환)", () => client.assert(response.status === 200, `status: ${response.status}`));
+    client.test("202 Accepted (수신됨 반환)", () => client.assert(response.status === 202, `status: ${response.status}`));
 %}
 
 
@@ -222,8 +222,8 @@ X-Event-Id: evt-fail-unknown-001
 ###   3-1 → 3-2 순서로 실행해야 올바른 결과가 나옵니다.
 ### ┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
 
-### 3-1. 최초 전송 → DONE 상태로 처리
-###      기대: 200 OK  {"message": "처리됨"}
+### 3-1. 최초 전송 → RECEIVED 저장 후 비동기 처리
+###      기대: 202 Accepted  {"message": "수신됨"}
 < {%
     const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
@@ -237,7 +237,7 @@ X-Event-Id: evt-idem-001
 {"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}
 
 > {%
-    client.test("200 OK - 처리됨", () => client.assert(response.body.message === "처리됨", JSON.stringify(response.body)));
+    client.test("202 Accepted - 수신됨", () => client.assert(response.status === 202 && response.body.message === "수신됨", JSON.stringify(response.body)));
 %}
 
 ###

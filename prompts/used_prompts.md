@@ -278,8 +278,52 @@ agents/security-agent.md 파일을 읽고 체크리스트 항목을 전부 검�
   좋을 것 같아 ! 
 ```
 
+## #16 동기 처리 로직 비동기 로직으로 변경
+**프롬프트**
+```
+근데 내가 코드를 확인하다 보니까 우리는 지금 Webhook request 들을 동기적으로 처리를 하고 있잖아 ? 이러면 만약 대량 트래픽이 들어온다고 가정하면 서버에서 동기적으로 처리하면 문제가 생길수도 있을것 같아 보이는데 어떤것 같아 ?
+  혹시 우선 요청만 받은 후 나중에 비동기로 처리하는것도 좋을것 같은데 어떄 ? 아니면 더 좋은 아키텍처나 더 좋은 처리 방식이 있다면 추천해 주었으면 좋겠어 ! PDF 명세에도 비동기로 처리하는것도 괜찮다고 나와있어서 ! 혹시 변경하는게 괜찮을것 같으면 현재 프로젝트에 테스트 코드나 리퀘스트 및 주석들도 확인 후에 변경해 줘 !
+```
 
+**구현 내용:**
+- PDF 명세 §2-3 확인: "저장 후 비동기 처리" 허용 명시
+- `domain/dto/WebhookResult.kt` — `Accepted` → `Queued` (신규 이벤트 202 반환용)
+- `config/AsyncConfig.kt` (신규) — `@EnableAsync` + `ThreadPoolTaskExecutor` (core=4, max=16, queue=500, prefix=`webhook-async-`)
+- `domain/event/WebhookReceivedEvent.kt` (신규) — Spring ApplicationEvent data class (느슨한 결합)
+- `service/WebhookEventListener.kt` (신규) — `@EventListener` 수신 → `processor.processAsync()` 위임 (Spring 프록시 경유로 `@Async` 정상 동작)
+- `service/WebhookEventProcessor.kt` (신규) — `@Async("webhookExecutor")` 비동기 처리기 (RECEIVED→PROCESSING→DONE|FAILED 상태 전이)
+- `service/WebhookService.kt` — `accountService` 제거, `ApplicationEventPublisher` 주입, `@Transactional` 제거 (SQLite BUSY_SNAPSHOT 방지), `publishEvent()` 호출 후 `Queued` 반환
+- `service/AccountService.kt` — `process()` 에 `@Transactional` 추가 (async 스레드에서 `@Modifying` 쿼리 트랜잭션 컨텍스트 보장)
+- `controller/WebhookController.kt` — `Queued` → 202 Accepted, 중복 → 200 OK
+- `test/controller/WebhookControllerSpec.kt` — "202 Accepted" 검증, `eventually(3.seconds)`/`eventually(5.seconds)` 비동기 상태 폴링
+- `test/service/WebhookServiceSpec.kt` — `ApplicationEventPublisher` mock 으로 교체
+- `requests/api-test.http` — 200 → 202, "처리됨" → "수신됨" 반영
 
+**설계 결정:**
+- ApplicationEvent 방식 채택: `WebhookService` ↔ `WebhookEventProcessor` 완전 분리 (Kafka 전환 시 `publishEvent()` 교체만으로 가능)
+- `@EventListener` 선택: `insertIfNotExists` 가 자체 `@Transactional` 로 즉시 커밋하므로 `publishEvent` 시점에 RECEIVED 행이 이미 DB 존재 → `@TransactionalEventListener` 불필요
+- `@Transactional` 미적용: SQLite WAL 모드 `SQLITE_BUSY_SNAPSHOT` 방지 (PostgreSQL 전환 시 `handle()` 에 `@Transactional` + `@TransactionalEventListener(AFTER_COMMIT)` 가 이상적)
+
+**빌드 결과:**
+- `./gradlew test` BUILD SUCCESSFUL (23개 테스트 전부 통과)
+- `./gradlew jacocoTestCoverageVerification` BUILD SUCCESSFUL (80% 이상 유지)
+
+---
+
+## #17 README.md 비동기 아키텍처 반영 업데이트
+**프롬프트**
+```
+현재 구현 된 코드 기준으로 요약해서 README.md 작성해줘
+```
+
+**구현 내용:**
+- `README.md` 전면 재작성 — 비동기 아키텍처 반영
+- **변경된 응답 코드**: POST /webhooks/account-changes 신규 이벤트 200 → 202 Accepted, 응답 메시지 "처리됨" → "수신됨"
+- **아키텍처 플로우 다이어그램**: `WebhookController → WebhookService → ApplicationEventPublisher → WebhookEventListener → WebhookEventProcessor(비동기)` 전체 흐름 ASCII 다이어그램
+- **프로젝트 구조**: `AsyncConfig.kt`, `WebhookReceivedEvent.kt`, `WebhookEventListener.kt`, `WebhookEventProcessor.kt`, `SecurityHeaderConfig.kt` 신규 파일 추가 반영
+- **API 명세**: 202 Accepted 반영, 각 엔드포인트 Request/Response 예시
+- **분산 환경 설계**: 현재 구성 한계(SQLite 단일 파일 + JVM 내 ConcurrentHashMap), 교체 포인트 2곳 (DB: SQLite→PostgreSQL, 락: ReentrantLock→Redis Redisson) 코드 예시 포함
+- **ORM**: JdbcTemplate 언급 → Spring Data JPA 로 수정
 
 
 

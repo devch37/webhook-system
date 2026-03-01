@@ -8,6 +8,7 @@ import com.aladin.webhook.domain.exception.NotFoundException
 import com.aladin.webhook.repository.AccountRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class AccountService(
@@ -19,6 +20,7 @@ class AccountService(
         accountRepository.findByAccountKey(accountKey)
             ?: throw NotFoundException("Account not found: $accountKey")
 
+    @Transactional
     fun process(request: WebhookRequest) {
         require(request.accountKey.length <= 255) { "accountKey too long" }
         accountRepository.upsert(request.accountKey) // 계정 없으면 생성

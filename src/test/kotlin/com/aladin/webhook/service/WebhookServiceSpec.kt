@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.util.UUID
 
+
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = ["webhook.secret=test-webhook-secret-key-at-least-32"],
@@ -55,12 +56,12 @@ class WebhookServiceSpec : DescribeSpec() {
         describe("validateConfig") {
             it("빈 시크릿 → IllegalStateException") {
                 val mockRepo = Mockito.mock(WebhookEventRepository::class.java)
-                val mockAccSvc = Mockito.mock(AccountService::class.java)
+                val mockPublisher = Mockito.mock(org.springframework.context.ApplicationEventPublisher::class.java)
                 val service =
                     WebhookService(
                         IdempotencyLockManager(),
                         mockRepo,
-                        mockAccSvc,
+                        mockPublisher,
                         ObjectMapper(),
                         "",
                     )

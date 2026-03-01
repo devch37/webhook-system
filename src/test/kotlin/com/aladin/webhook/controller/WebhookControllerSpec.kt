@@ -1,6 +1,7 @@
 package com.aladin.webhook.controller
 
 import com.aladin.webhook.BaseIntegrationSpec
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.springframework.http.HttpEntity
@@ -10,14 +11,15 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration.Companion.seconds
 
 class WebhookControllerSpec :
     BaseIntegrationSpec({
 
         describe("서명 검증") {
-            it("올바른 서명 → 200") {
+            it("올바른 서명 → 202 Accepted") {
                 val body = webhookBody("user_001", "ACCOUNT_DELETED")
-                postWebhook(body = body).statusCode shouldBe HttpStatus.OK
+                postWebhook(body = body).statusCode shouldBe HttpStatus.ACCEPTED
             }
 
             it("잘못된 서명 → 401") {
@@ -48,8 +50,15 @@ class WebhookControllerSpec :
                 val body = webhookBody("user_idem_01", "ACCOUNT_DELETED")
 
                 postWebhook(eventId = eventId, body = body)
-                val res = postWebhook(eventId = eventId, body = body)
 
+                // 비동기 처리 완료(DONE) 대기 후 중복 전송
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
+                        .body?.get("status") shouldBe "DONE"
+                }
+
+                val res = postWebhook(eventId = eventId, body = body)
                 res.statusCode shouldBe HttpStatus.OK
                 res.body?.get("message") shouldBe "이미 처리됨"
             }
@@ -57,8 +66,16 @@ class WebhookControllerSpec :
             it("이미 실패한 이벤트 재전송 → 이미 처리됨 (실패)") {
                 val eventId = UUID.randomUUID().toString()
                 val body = webhookBody("user_fail_dup_02", "EMAIL_FORWARDING_CHANGED") // email 없음 → FAILED
-                postWebhook(eventId = eventId, body = body) // first: FAILED
-                val res = postWebhook(eventId = eventId, body = body) // duplicate
+                postWebhook(eventId = eventId, body = body)
+
+                // 비동기 처리 완료(FAILED) 대기 후 중복 전송
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
+                        .body?.get("status") shouldBe "FAILED"
+                }
+
+                val res = postWebhook(eventId = eventId, body = body)
                 res.statusCode shouldBe HttpStatus.OK
                 res.body?.get("message") shouldBe "이미 처리됨 (실패)"
             }
@@ -67,78 +84,79 @@ class WebhookControllerSpec :
                 val eventId = UUID.randomUUID().toString()
                 val body = webhookBody("user_race_01", "ACCOUNT_DELETED")
 
-                // 5개 동시 요청
+                // 5개 동시 요청: 첫 수신은 202, 나머지 중복은 200
                 val results =
                     (1..5)
                         .map { CompletableFuture.supplyAsync { postWebhook(eventId = eventId, body = body) } }
                         .map { it.get() }
 
-                results.all { it.statusCode == HttpStatus.OK } shouldBe true
+                results.all { it.statusCode.is2xxSuccessful } shouldBe true
 
-                // 이벤트는 DONE 상태 1개만 존재해야 함
-                val event =
-                    restTemplate.getForEntity(
-                        "http://localhost:$port/inbox/events/$eventId",
-                        Map::class.java,
-                    )
-                event.body?.get("status") shouldBe "DONE"
+                // 비동기 처리 완료 대기 후 상태 검증
+                eventually(5.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
+                        .body?.get("status") shouldBe "DONE"
+                }
             }
         }
 
         describe("이벤트 처리") {
             it("EMAIL_FORWARDING_CHANGED → 이메일 갱신") {
+                val eventId = UUID.randomUUID().toString()
                 val body =
                     webhookBody(
                         "user_email_01",
                         "EMAIL_FORWARDING_CHANGED",
                         mapOf("email" to "updated@test.com"),
                     )
-                postWebhook(body = body).statusCode shouldBe HttpStatus.OK
+                postWebhook(eventId = eventId, body = body).statusCode shouldBe HttpStatus.ACCEPTED
 
-                val res =
-                    restTemplate.getForEntity(
-                        "http://localhost:$port/accounts/user_email_01",
-                        Map::class.java,
-                    )
-                res.body?.get("email") shouldBe "updated@test.com"
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/accounts/user_email_01", Map::class.java)
+                        .body?.get("email") shouldBe "updated@test.com"
+                }
             }
 
             it("ACCOUNT_DELETED → status DELETED") {
+                val eventId = UUID.randomUUID().toString()
                 val body = webhookBody("user_del_01", "ACCOUNT_DELETED")
-                postWebhook(body = body).statusCode shouldBe HttpStatus.OK
+                postWebhook(eventId = eventId, body = body).statusCode shouldBe HttpStatus.ACCEPTED
 
-                val res =
-                    restTemplate.getForEntity(
-                        "http://localhost:$port/accounts/user_del_01",
-                        Map::class.java,
-                    )
-                res.body?.get("status") shouldBe "DELETED"
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/accounts/user_del_01", Map::class.java)
+                        .body?.get("status") shouldBe "DELETED"
+                }
             }
 
             it("APPLE_ACCOUNT_DELETED → status APPLE_DELETED") {
+                val eventId = UUID.randomUUID().toString()
                 val body = webhookBody("user_apple_01", "APPLE_ACCOUNT_DELETED")
-                postWebhook(body = body).statusCode shouldBe HttpStatus.OK
+                postWebhook(eventId = eventId, body = body).statusCode shouldBe HttpStatus.ACCEPTED
 
-                val res =
-                    restTemplate.getForEntity(
-                        "http://localhost:$port/accounts/user_apple_01",
-                        Map::class.java,
-                    )
-                res.body?.get("status") shouldBe "APPLE_DELETED"
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/accounts/user_apple_01", Map::class.java)
+                        .body?.get("status") shouldBe "APPLE_DELETED"
+                }
             }
 
             it("EMAIL_FORWARDING_CHANGED에 email 누락 → FAILED 기록") {
                 val eventId = UUID.randomUUID().toString()
                 val body = webhookBody("user_fail_01", "EMAIL_FORWARDING_CHANGED") // data 없음
-                postWebhook(eventId = eventId, body = body)
+                postWebhook(eventId = eventId, body = body).statusCode shouldBe HttpStatus.ACCEPTED
 
-                val res =
-                    restTemplate.getForEntity(
-                        "http://localhost:$port/inbox/events/$eventId",
-                        Map::class.java,
-                    )
-                res.body?.get("status") shouldBe "FAILED"
-                res.body?.get("errorMessage") shouldNotBe null
+                eventually(3.seconds) {
+                    val res =
+                        restTemplate.getForEntity(
+                            "http://localhost:$port/inbox/events/$eventId",
+                            Map::class.java,
+                        )
+                    res.body?.get("status") shouldBe "FAILED"
+                    res.body?.get("errorMessage") shouldNotBe null
+                }
             }
         }
 

@@ -4,6 +4,7 @@ import com.aladin.webhook.domain.WebhookEvent
 import com.aladin.webhook.domain.dto.WebhookRequest
 import com.aladin.webhook.domain.dto.WebhookResult
 import com.aladin.webhook.domain.enum.EventStatus
+import com.aladin.webhook.domain.event.WebhookReceivedEvent
 import com.aladin.webhook.domain.exception.NotFoundException
 import com.aladin.webhook.repository.WebhookEventRepository
 import com.aladin.webhook.util.IdempotencyLockManager
@@ -11,14 +12,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class WebhookService(
     private val lockManager: IdempotencyLockManager,
     private val eventRepository: WebhookEventRepository,
-    private val accountService: AccountService,
+    private val eventPublisher: ApplicationEventPublisher,
     private val objectMapper: ObjectMapper,
     @Value("\${webhook.secret}") private val secret: String,
 ) {
@@ -37,48 +38,35 @@ class WebhookService(
      * 처리 흐름 (서명·헤더 검증은 WebhookSignatureAspect 가 @Before 로 선처리):
      * 1. eventId 키 잠금 (Race Condition 방어)
      * 2. Idempotency 체크 (DB UNIQUE + 앱 레벨 이중 방어)
-     * 3. RECEIVED → PROCESSING → DONE | FAILED 상태 전이
+     * 3. 신규 이벤트 → insertIfNotExists(자체 @Transactional, 즉시 커밋) 후 이벤트 발행
+     *    WebhookEventListener 가 수신 → processor.processAsync() 비동기 처리 시작
+     * 4. 중복 이벤트 → 현재 상태 기반 응답 → 200 OK
      */
-    @Transactional
     fun handle(
         eventId: String,
         rawBody: String,
     ): WebhookResult =
         lockManager.withLock(eventId) {
-            processWithIdempotency(eventId, rawBody)
-        }
+            val request = parseRequest(rawBody)
 
-    private fun processWithIdempotency(
-        eventId: String,
-        rawBody: String,
-    ): WebhookResult {
-        val request = parseRequest(rawBody)
-
-        val isNew = eventRepository.insertIfNotExists(eventId, request.eventType, rawBody)
-        if (!isNew) {
-            val existing = eventRepository.findByEventId(eventId)
-            log.info("Duplicate event. eventId={}, status={}", eventId, existing?.status)
-            return when (existing?.status) {
-                EventStatus.DONE -> WebhookResult.AlreadyProcessed("이미 처리됨")
-                EventStatus.PROCESSING -> WebhookResult.Processing("처리 중")
-                EventStatus.FAILED -> WebhookResult.AlreadyProcessed("이미 처리됨 (실패)")
-                else -> WebhookResult.AlreadyProcessed("이미 처리됨")
+            val isNew = eventRepository.insertIfNotExists(eventId, request.eventType, rawBody)
+            if (!isNew) {
+                val existing = eventRepository.findByEventId(eventId)
+                log.info("Duplicate event. eventId={}, status={}", eventId, existing?.status)
+                return@withLock when (existing?.status) {
+                    EventStatus.DONE -> WebhookResult.AlreadyProcessed("이미 처리됨")
+                    EventStatus.PROCESSING -> WebhookResult.Processing("처리 중")
+                    EventStatus.FAILED -> WebhookResult.AlreadyProcessed("이미 처리됨 (실패)")
+                    else -> WebhookResult.AlreadyProcessed("이미 처리됨")
+                }
             }
-        }
 
-        eventRepository.updateStatus(eventId, EventStatus.PROCESSING)
-
-        return try {
-            accountService.process(request)
-            eventRepository.updateStatus(eventId, EventStatus.DONE)
-            log.info("Event done. eventId={}, type={}", eventId, request.eventType)
-            WebhookResult.Accepted("처리됨")
-        } catch (e: Exception) {
-            eventRepository.updateFailed(eventId, e.message ?: "Unknown error")
-            log.error("Event failed. eventId={}, error={}", eventId, e.message)
-            WebhookResult.Accepted("처리됨") // 외부 재전송 루프 방지
+            // 트랜잭션 커밋 후 비동기 처리 이벤트 발행
+            // (AFTER_COMMIT 리스너가 DB에 RECEIVED 행이 존재함을 보장받고 처리 시작)
+            eventPublisher.publishEvent(WebhookReceivedEvent(eventId, rawBody))
+            log.info("Event received and published. eventId={}", eventId)
+            WebhookResult.Queued("수신됨")
         }
-    }
 
     private fun parseRequest(rawBody: String): WebhookRequest =
         runCatching { objectMapper.readValue(rawBody, WebhookRequest::class.java) }
