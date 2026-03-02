@@ -44,4 +44,40 @@ class HmacVerifierSpec :
                 }
             }
         }
+
+        given("빈 페이로드") {
+            val payload = ""
+            val secret = "my-secret"
+
+            `when`("빈 payload의 올바른 서명으로 검증") {
+                then("true 반환 (빈 body도 유효한 HMAC 대상)") {
+                    verifier.verify(payload, sign(payload, secret), secret) shouldBe true
+                }
+            }
+            `when`("빈 payload에 잘못된 서명으로 검증") {
+                then("false 반환") {
+                    verifier.verify(payload, "wrong", secret) shouldBe false
+                }
+            }
+        }
+
+        given("유니코드(한국어) 페이로드") {
+            val payload = """{"accountKey":"사용자","eventType":"ACCOUNT_DELETED"}"""
+            val secret = "my-secret"
+
+            `when`("올바른 서명으로 검증") {
+                then("UTF-8 인코딩 일관성 보장 — true 반환") {
+                    verifier.verify(payload, sign(payload, secret), secret) shouldBe true
+                }
+            }
+            `when`("동일 payload를 다른 인코딩으로 서명한 경우") {
+                then("false 반환") {
+                    // Latin-1로 인코딩된 시그니처는 UTF-8 검증과 불일치
+                    val mac = Mac.getInstance("HmacSHA256")
+                    mac.init(SecretKeySpec(secret.toByteArray(), "HmacSHA256"))
+                    val latin1Sig = mac.doFinal(payload.toByteArray(Charsets.ISO_8859_1)).joinToString("") { "%02x".format(it) }
+                    verifier.verify(payload, latin1Sig, secret) shouldBe false
+                }
+            }
+        }
     })

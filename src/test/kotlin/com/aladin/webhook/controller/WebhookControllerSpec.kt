@@ -27,6 +27,23 @@ class WebhookControllerSpec :
                 postWebhook(body = body, sig = "bad-sig").statusCode shouldBe HttpStatus.UNAUTHORIZED
             }
 
+            it("X-Signature 헤더 누락 → 401") {
+                val body = webhookBody("user_003", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Event-Id", UUID.randomUUID().toString())
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.UNAUTHORIZED
+            }
+
             it("X-Event-Id 헤더 누락 → 400") {
                 val headers =
                     HttpHeaders().apply {
@@ -41,6 +58,82 @@ class WebhookControllerSpec :
                         Map::class.java,
                     )
                 res.statusCode shouldBe HttpStatus.BAD_REQUEST
+            }
+        }
+
+        describe("X-Event-Id 형식 검증") {
+            it("255자 초과 eventId → 400") {
+                val longEventId = "a".repeat(256)
+                val body = webhookBody("user_long_id", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Signature", sign(body))
+                        set("X-Event-Id", longEventId)
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.BAD_REQUEST
+            }
+
+            it("허용되지 않은 특수문자 포함 eventId → 400") {
+                val body = webhookBody("user_special_id", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Signature", sign(body))
+                        set("X-Event-Id", "invalid@event#id!")
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.BAD_REQUEST
+            }
+
+            it("공백만 포함한 eventId → 400") {
+                val body = webhookBody("user_blank_id", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Signature", sign(body))
+                        set("X-Event-Id", "   ")
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.BAD_REQUEST
+            }
+
+            it("255자 정확히 eventId → 202 허용") {
+                val exactEventId = "a".repeat(255)
+                val body = webhookBody("user_exact_id", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Signature", sign(body))
+                        set("X-Event-Id", exactEventId)
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.ACCEPTED
             }
         }
 
@@ -164,6 +257,67 @@ class WebhookControllerSpec :
                     res.body?.get("errorMessage") shouldNotBe null
                 }
             }
+
+            it("잘못된 이메일 형식 → FAILED 기록") {
+                val eventId = UUID.randomUUID().toString()
+                val body =
+                    webhookBody(
+                        "user_bad_email_01",
+                        "EMAIL_FORWARDING_CHANGED",
+                        mapOf("email" to "not-an-email"),
+                    )
+                postWebhook(eventId = eventId, body = body).statusCode shouldBe HttpStatus.ACCEPTED
+
+                eventually(3.seconds) {
+                    val res =
+                        restTemplate.getForEntity(
+                            "http://localhost:$port/inbox/events/$eventId",
+                            Map::class.java,
+                        )
+                    res.body?.get("status") shouldBe "FAILED"
+                    res.body?.get("errorMessage") shouldNotBe null
+                }
+            }
+
+            it("accountKey 255자 초과 → FAILED 기록") {
+                val eventId = UUID.randomUUID().toString()
+                val longKey = "k".repeat(256)
+                val body = webhookBody(longKey, "ACCOUNT_DELETED")
+                postWebhook(eventId = eventId, body = body).statusCode shouldBe HttpStatus.ACCEPTED
+
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/inbox/events/$eventId", Map::class.java)
+                        .body
+                        ?.get("status") shouldBe "FAILED"
+                }
+            }
+
+            it("연속 이메일 변경 → 마지막 이메일이 반영됨") {
+                val accountKey = "user_email_seq_01"
+
+                val eventId1 = UUID.randomUUID().toString()
+                val body1 = webhookBody(accountKey, "EMAIL_FORWARDING_CHANGED", mapOf("email" to "first@test.com"))
+                postWebhook(eventId = eventId1, body = body1)
+
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/inbox/events/$eventId1", Map::class.java)
+                        .body
+                        ?.get("status") shouldBe "DONE"
+                }
+
+                val eventId2 = UUID.randomUUID().toString()
+                val body2 = webhookBody(accountKey, "EMAIL_FORWARDING_CHANGED", mapOf("email" to "second@test.com"))
+                postWebhook(eventId = eventId2, body = body2)
+
+                eventually(3.seconds) {
+                    restTemplate
+                        .getForEntity("http://localhost:$port/accounts/$accountKey", Map::class.java)
+                        .body
+                        ?.get("email") shouldBe "second@test.com"
+                }
+            }
         }
 
         describe("잘못된 요청") {
@@ -188,6 +342,63 @@ class WebhookControllerSpec :
                         "http://localhost:$port/inbox/events/nonexistent",
                         Map::class.java,
                     ).statusCode shouldBe HttpStatus.NOT_FOUND
+            }
+
+            it("GET /accounts 응답에 필수 필드 포함 (accountKey, status, createdAt, updatedAt)") {
+                val accountKey = "user_fields_01"
+                val eventId = UUID.randomUUID().toString()
+                val body = webhookBody(accountKey, "ACCOUNT_DELETED")
+                postWebhook(eventId = eventId, body = body)
+
+                eventually(3.seconds) {
+                    val res =
+                        restTemplate.getForEntity(
+                            "http://localhost:$port/accounts/$accountKey",
+                            Map::class.java,
+                        )
+                    res.statusCode shouldBe HttpStatus.OK
+                    res.body?.get("accountKey") shouldBe accountKey
+                    res.body?.get("status") shouldBe "DELETED"
+                    res.body?.get("createdAt") shouldNotBe null
+                    res.body?.get("updatedAt") shouldNotBe null
+                }
+            }
+
+            it("GET /inbox/events DONE 상태 응답에 필수 필드 포함") {
+                val accountKey = "user_inbox_fields_01"
+                val eventId = UUID.randomUUID().toString()
+                val body = webhookBody(accountKey, "ACCOUNT_DELETED")
+                postWebhook(eventId = eventId, body = body)
+
+                eventually(3.seconds) {
+                    val res =
+                        restTemplate.getForEntity(
+                            "http://localhost:$port/inbox/events/$eventId",
+                            Map::class.java,
+                        )
+                    res.statusCode shouldBe HttpStatus.OK
+                    res.body?.get("eventId") shouldBe eventId
+                    res.body?.get("eventType") shouldBe "ACCOUNT_DELETED"
+                    res.body?.get("status") shouldBe "DONE"
+                    res.body?.get("errorMessage") shouldBe null
+                }
+            }
+
+            it("GET /inbox/events FAILED 상태 응답에 errorMessage 포함") {
+                val eventId = UUID.randomUUID().toString()
+                val body = webhookBody("user_inbox_fail_01", "EMAIL_FORWARDING_CHANGED")
+                postWebhook(eventId = eventId, body = body)
+
+                eventually(3.seconds) {
+                    val res =
+                        restTemplate.getForEntity(
+                            "http://localhost:$port/inbox/events/$eventId",
+                            Map::class.java,
+                        )
+                    res.statusCode shouldBe HttpStatus.OK
+                    res.body?.get("status") shouldBe "FAILED"
+                    res.body?.get("errorMessage") shouldNotBe null
+                }
             }
         }
     })
