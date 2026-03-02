@@ -29,7 +29,7 @@
 ### 로컬 실행
 
 ```bash
-WEBHOOK_SECRET=your-secret-key-replace-this-32chars \
+WEBHOOK_SECRET=your-secret-key-replace-this-value \
 ./gradlew bootRun
 ```
 
@@ -38,7 +38,7 @@ WEBHOOK_SECRET=your-secret-key-replace-this-32chars \
 ```bash
 ./gradlew bootJar
 
-WEBHOOK_SECRET=your-secret-key-replace-this-32chars \
+WEBHOOK_SECRET=your-secret-key-replace-this-value \
 java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 ```
 
@@ -126,7 +126,7 @@ java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 서명은 `X-Timestamp`와 요청 바디를 합쳐 생성합니다. `openssl`로 즉석에서 계산할 수 있습니다.
 
 ```bash
-SECRET="your-secret-key-replace-this-32chars"
+SECRET="your-secret-key-replace-this-value"
 BODY='{"accountKey":"user-account-123","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"new@example.com"}}'
 TS=$(date +%s)
 SIG=$(echo -n "${TS}.${BODY}" | openssl dgst -sha256 -hmac "${SECRET}" | awk '{print $2}')
@@ -248,7 +248,7 @@ curl -s http://localhost:8080/inbox/events/evt-001
 # Python
 import hmac, hashlib, time
 
-secret = "your-secret-key-replace-this-32chars"
+secret = "your-secret-key-replace-this-value"
 body   = '{"accountKey":"user-123","eventType":"ACCOUNT_DELETED","data":{}}'
 ts     = str(int(time.time()))         # Unix epoch seconds
 
@@ -266,7 +266,7 @@ signature = hmac.new(
 
 ```kotlin
 // Kotlin
-val secret    = "your-secret-key-replace-this-32chars"
+val secret    = "your-secret-key-replace-this-value"
 val body      = """{"accountKey":"user-123","eventType":"ACCOUNT_DELETED","data":{}}"""
 val timestamp = Instant.now().epochSecond.toString()
 
@@ -279,7 +279,7 @@ val signature = mac.doFinal("$timestamp.$body".toByteArray(Charsets.UTF_8))
 ```javascript
 // JavaScript (Node.js)
 const crypto    = require("crypto");
-const secret    = "your-secret-key-replace-this-32chars";
+const secret    = "your-secret-key-replace-this-value";
 const body      = JSON.stringify({ accountKey: "user-123", eventType: "ACCOUNT_DELETED", data: {} });
 const timestamp = Math.floor(Date.now() / 1000).toString();
 
