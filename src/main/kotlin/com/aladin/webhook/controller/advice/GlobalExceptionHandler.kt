@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MissingRequestHeaderException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -31,6 +32,12 @@ class GlobalExceptionHandler {
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(mapOf("code" to "BAD_REQUEST", "message" to (e.message ?: "Bad request")))
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableBody(e: HttpMessageNotReadableException): HttpEntity<Map<String, String>> =
+        ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(mapOf("code" to "BAD_REQUEST", "message" to "Request body is missing or malformed"))
 
     @ExceptionHandler(MissingRequestHeaderException::class)
     fun handleMissingHeader(e: MissingRequestHeaderException): HttpEntity<Map<String, String>> =
