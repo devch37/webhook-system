@@ -12,6 +12,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.test.context.ActiveProfiles
+import java.time.Instant
 import java.util.UUID
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -40,11 +41,18 @@ abstract class BaseIntegrationSpec(
         body() // DescribeSpec DSL 등록: this == BaseIntegrationSpec 인스턴스
     }
 
-    fun sign(body: String): String {
+    /**
+     * HMAC-SHA256(secret, "$timestamp.$body") 계산
+     * timestamp 기본값: 현재 Unix epoch seconds
+     */
+    fun sign(
+        body: String,
+        timestamp: String = Instant.now().epochSecond.toString(),
+    ): String {
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         return mac
-            .doFinal(body.toByteArray(Charsets.UTF_8))
+            .doFinal("$timestamp.$body".toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
     }
 
@@ -60,12 +68,14 @@ abstract class BaseIntegrationSpec(
         eventId: String = UUID.randomUUID().toString(),
         body: String,
         sig: String? = null,
+        timestamp: String = Instant.now().epochSecond.toString(),
     ): ResponseEntity<Map<*, *>> {
         val headers =
             HttpHeaders().apply {
                 contentType = MediaType.APPLICATION_JSON
-                set("X-Signature", sig ?: sign(body))
+                set("X-Signature", sig ?: sign(body, timestamp))
                 set("X-Event-Id", eventId)
+                set("X-Timestamp", timestamp)
             }
         return restTemplate.exchange(
             "http://localhost:$port/webhooks/account-changes",

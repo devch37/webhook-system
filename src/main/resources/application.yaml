@@ -24,6 +24,8 @@ spring:
 
 webhook:
   secret: ${WEBHOOK_SECRET:your-secret-key-replace-this-value}
+  signature:
+    max-age-minutes: 15  # Replay Attack 방지 유효 시간 (분)
 
 server:
   port: ${PORT:8080}

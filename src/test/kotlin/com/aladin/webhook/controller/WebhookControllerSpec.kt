@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration.Companion.seconds
@@ -44,6 +45,62 @@ class WebhookControllerSpec :
                 res.statusCode shouldBe HttpStatus.UNAUTHORIZED
             }
 
+            it("X-Timestamp 헤더 누락 → 401") {
+                val body = webhookBody("user_004", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Signature", sign(body))
+                        set("X-Event-Id", UUID.randomUUID().toString())
+                        // X-Timestamp 헤더 의도적 누락
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.UNAUTHORIZED
+            }
+
+            it("만료된 타임스탬프 (16분 전) → 401") {
+                val expiredTimestamp = (Instant.now().epochSecond - 16 * 60).toString()
+                val body = webhookBody("user_005", "ACCOUNT_DELETED")
+                postWebhook(body = body, timestamp = expiredTimestamp).statusCode shouldBe HttpStatus.UNAUTHORIZED
+            }
+
+            it("미래 타임스탬프 (6분 후) → 401") {
+                val futureTimestamp = (Instant.now().epochSecond + 6 * 60).toString()
+                val body = webhookBody("user_006", "ACCOUNT_DELETED")
+                postWebhook(body = body, timestamp = futureTimestamp).statusCode shouldBe HttpStatus.UNAUTHORIZED
+            }
+
+            it("유효 범위 내 타임스탬프 (14분 전) → 202 허용") {
+                val recentTimestamp = (Instant.now().epochSecond - 14 * 60).toString()
+                val body = webhookBody("user_007", "ACCOUNT_DELETED")
+                postWebhook(body = body, timestamp = recentTimestamp).statusCode shouldBe HttpStatus.ACCEPTED
+            }
+
+            it("타임스탬프 형식 오류 (숫자 아닌 값) → 401") {
+                val body = webhookBody("user_008", "ACCOUNT_DELETED")
+                val headers =
+                    HttpHeaders().apply {
+                        contentType = MediaType.APPLICATION_JSON
+                        set("X-Signature", sign(body))
+                        set("X-Event-Id", UUID.randomUUID().toString())
+                        set("X-Timestamp", "not-a-number")
+                    }
+                val res =
+                    restTemplate.exchange(
+                        "http://localhost:$port/webhooks/account-changes",
+                        HttpMethod.POST,
+                        HttpEntity(body, headers),
+                        Map::class.java,
+                    )
+                res.statusCode shouldBe HttpStatus.UNAUTHORIZED
+            }
+
             it("X-Event-Id 헤더 누락 → 400") {
                 val headers =
                     HttpHeaders().apply {
@@ -65,10 +122,12 @@ class WebhookControllerSpec :
             it("255자 초과 eventId → 400") {
                 val longEventId = "a".repeat(256)
                 val body = webhookBody("user_long_id", "ACCOUNT_DELETED")
+                val ts = Instant.now().epochSecond.toString()
                 val headers =
                     HttpHeaders().apply {
                         contentType = MediaType.APPLICATION_JSON
-                        set("X-Signature", sign(body))
+                        set("X-Signature", sign(body, ts))
+                        set("X-Timestamp", ts)
                         set("X-Event-Id", longEventId)
                     }
                 val res =
@@ -83,10 +142,12 @@ class WebhookControllerSpec :
 
             it("허용되지 않은 특수문자 포함 eventId → 400") {
                 val body = webhookBody("user_special_id", "ACCOUNT_DELETED")
+                val ts = Instant.now().epochSecond.toString()
                 val headers =
                     HttpHeaders().apply {
                         contentType = MediaType.APPLICATION_JSON
-                        set("X-Signature", sign(body))
+                        set("X-Signature", sign(body, ts))
+                        set("X-Timestamp", ts)
                         set("X-Event-Id", "invalid@event#id!")
                     }
                 val res =
@@ -101,10 +162,12 @@ class WebhookControllerSpec :
 
             it("공백만 포함한 eventId → 400") {
                 val body = webhookBody("user_blank_id", "ACCOUNT_DELETED")
+                val ts = Instant.now().epochSecond.toString()
                 val headers =
                     HttpHeaders().apply {
                         contentType = MediaType.APPLICATION_JSON
-                        set("X-Signature", sign(body))
+                        set("X-Signature", sign(body, ts))
+                        set("X-Timestamp", ts)
                         set("X-Event-Id", "   ")
                     }
                 val res =
@@ -120,10 +183,12 @@ class WebhookControllerSpec :
             it("255자 정확히 eventId → 202 허용") {
                 val exactEventId = "a".repeat(255)
                 val body = webhookBody("user_exact_id", "ACCOUNT_DELETED")
+                val ts = Instant.now().epochSecond.toString()
                 val headers =
                     HttpHeaders().apply {
                         contentType = MediaType.APPLICATION_JSON
-                        set("X-Signature", sign(body))
+                        set("X-Signature", sign(body, ts))
+                        set("X-Timestamp", ts)
                         set("X-Event-Id", exactEventId)
                     }
                 val res =

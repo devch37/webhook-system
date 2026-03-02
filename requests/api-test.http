@@ -9,6 +9,11 @@
 ###
 ### 환경 선택: http-client.env.json → "local" 프로파일
 ###
+### 서명 방식 (Stripe 스타일, Replay Attack 방지):
+###   X-Timestamp : Unix epoch seconds
+###   X-Signature : HMAC-SHA256(secret, "$timestamp.$body") as hex
+###   유효 시간    : 15분 이내 (webhook.signature.max-age-minutes)
+###
 ### 실행 순서 권장:
 ###   Section 1 → Section 2 → Section 3 → Section 4 → Section 5
 ### ════════════════════════════════════════════════════════
@@ -23,12 +28,15 @@
 < {%
     const body = '{"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 # @name emailChangedOk
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: {{$uuid}}
 
 {"accountKey":"user_email_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"updated@example.com"}}
@@ -45,12 +53,15 @@ X-Event-Id: {{$uuid}}
 < {%
     const body = '{"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 # @name accountDeletedOk
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: {{$uuid}}
 
 {"accountKey":"user_deleted_01","eventType":"ACCOUNT_DELETED","data":{}}
@@ -67,12 +78,15 @@ X-Event-Id: {{$uuid}}
 < {%
     const body = '{"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 # @name appleDeletedOk
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: {{$uuid}}
 
 {"accountKey":"user_apple_01","eventType":"APPLE_ACCOUNT_DELETED","data":{}}
@@ -89,9 +103,14 @@ X-Event-Id: {{$uuid}}
 
 ### 2-1. 잘못된 서명
 ###      기대: 401 Unauthorized  {"code": "UNAUTHORIZED"}
+< {%
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+%}
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: 0000000000000000000000000000000000000000000000000000000000000000
+X-Timestamp: {{ts}}
 X-Event-Id: {{$uuid}}
 
 {"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
@@ -118,7 +137,7 @@ X-Signature: dummysig
 ###
 
 ### 2-3. X-Signature 헤더 누락
-###      기대: 400 Bad Request  {"code": "MISSING_HEADER"}
+###      기대: 401 Unauthorized
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Event-Id: {{$uuid}}
@@ -126,21 +145,62 @@ X-Event-Id: {{$uuid}}
 {"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
 
 > {%
-    client.test("400 Bad Request", () => client.assert(response.status === 401, `status: ${response.status}`));
+    client.test("401 Unauthorized", () => client.assert(response.status === 401, `status: ${response.status}`));
 %}
 
 ###
 
-### 2-4. 잘못된 JSON 바디 (서명은 유효)
-###      기대: 400 Bad Request  {"code": "BAD_REQUEST"}
+### 2-4. X-Timestamp 헤더 누락
+###      기대: 401 Unauthorized
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: dummysig
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("401 Unauthorized (X-Timestamp 누락)", () => client.assert(response.status === 401, `status: ${response.status}`));
+%}
+
+###
+
+### 2-5. 만료된 타임스탬프 (20분 전)
+###      기대: 401 Unauthorized
 < {%
-    const body = 'this is not valid json!!!';
+    const body = '{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const expiredTs = (Math.floor(Date.now() / 1000) - 20 * 60).toString();
+    request.variables.set("ts", expiredTs);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(expiredTs + "." + body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
+X-Event-Id: {{$uuid}}
+
+{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
+
+> {%
+    client.test("401 Unauthorized (타임스탬프 만료)", () => client.assert(response.status === 401, `status: ${response.status}`));
+%}
+
+###
+
+### 2-6. 잘못된 JSON 바디 (서명은 유효)
+###      기대: 400 Bad Request  {"code": "BAD_REQUEST"}
+< {%
+    const body = 'this is not valid json!!!';
+    const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
+%}
+POST {{baseUrl}}/webhooks/account-changes
+Content-Type: application/json
+X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: {{$uuid}}
 
 
@@ -151,16 +211,19 @@ X-Event-Id: {{$uuid}}
 
 ###
 
-### 2-5. eventId 에 특수문자 포함 (허용 문자: a-z A-Z 0-9 - _)
+### 2-7. eventId 에 특수문자 포함 (허용 문자: a-z A-Z 0-9 - _)
 ###      기대: 400 Bad Request
 < {%
     const body = '{"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: invalid@event#id!
 
 {"accountKey":"user_001","eventType":"ACCOUNT_DELETED","data":{}}
@@ -171,18 +234,21 @@ X-Event-Id: invalid@event#id!
 
 ###
 
-### 2-6. EMAIL_FORWARDING_CHANGED - data.email 필드 누락 → FAILED 기록
+### 2-8. EMAIL_FORWARDING_CHANGED - data.email 필드 누락 → FAILED 기록
 ###      기대: 202 Accepted (수신됨 응답, 비동기 처리 후 이벤트는 FAILED 상태로 저장)
 ###      ※ evt-fail-email-001 은 Section 3 / Section 5 에서 재사용
 < {%
     const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 # @name emailMissingFail
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: evt-fail-email-001
 
 {"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}
@@ -193,18 +259,21 @@ X-Event-Id: evt-fail-email-001
 
 ###
 
-### 2-7. 알 수 없는 eventType → FAILED 기록
+### 2-9. 알 수 없는 eventType → FAILED 기록
 ###      기대: 202 Accepted (수신됨 응답, 비동기 처리 후 이벤트는 FAILED 상태로 저장)
 ###      ※ evt-fail-unknown-001 은 Section 5 에서 재사용
 < {%
     const body = '{"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 # @name unknownEventFail
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: evt-fail-unknown-001
 
 {"accountKey":"user_unknown_01","eventType":"UNKNOWN_EVENT_TYPE","data":{}}
@@ -226,11 +295,14 @@ X-Event-Id: evt-fail-unknown-001
 < {%
     const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: evt-idem-001
 
 {"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}
@@ -246,11 +318,14 @@ X-Event-Id: evt-idem-001
 < {%
     const body = '{"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: evt-idem-001
 
 {"accountKey":"user_idem_01","eventType":"ACCOUNT_DELETED","data":{}}
@@ -263,15 +338,18 @@ X-Event-Id: evt-idem-001
 
 ### 3-3. 실패 이벤트 재전송 (evt-fail-email-001, FAILED)
 ###      기대: 200 OK  {"message": "이미 처리됨 (실패)"}
-###      ※ Section 2-6 을 먼저 실행해야 함
+###      ※ Section 2-8 을 먼저 실행해야 함
 < {%
     const body = '{"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}';
     const secret = request.environment.get("WEBHOOK_SECRET") || "your-secret-key-replace-this-value";
-    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(body).digest().toHex());
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    request.variables.set("ts", timestamp);
+    request.variables.set("sig", crypto.hmac.sha256().withTextSecret(secret).updateWithText(timestamp + "." + body).digest().toHex());
 %}
 POST {{baseUrl}}/webhooks/account-changes
 Content-Type: application/json
 X-Signature: {{sig}}
+X-Timestamp: {{ts}}
 X-Event-Id: evt-fail-email-001
 
 {"accountKey":"user_fail_01","eventType":"EMAIL_FORWARDING_CHANGED","data":{}}
@@ -355,7 +433,7 @@ GET {{baseUrl}}/inbox/events/evt-idem-001
 
 ### 5-2. 실패한 이벤트 조회 - email 누락 (FAILED)
 ###      기대: 200 OK  status = FAILED, errorMessage 있음
-###      ※ Section 2-6 선행 필요 (evt-fail-email-001)
+###      ※ Section 2-8 선행 필요 (evt-fail-email-001)
 GET {{baseUrl}}/inbox/events/evt-fail-email-001
 
 > {%
@@ -368,7 +446,7 @@ GET {{baseUrl}}/inbox/events/evt-fail-email-001
 
 ### 5-3. 실패한 이벤트 조회 - 알 수 없는 타입 (FAILED)
 ###      기대: 200 OK  status = FAILED
-###      ※ Section 2-7 선행 필요 (evt-fail-unknown-001)
+###      ※ Section 2-9 선행 필요 (evt-fail-unknown-001)
 GET {{baseUrl}}/inbox/events/evt-fail-unknown-001
 
 > {%
