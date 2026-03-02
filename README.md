@@ -121,6 +121,34 @@ java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 > `202` 응답은 **수신 확인**이며 처리 완료를 의미하지 않습니다.
 > 처리 결과는 `GET /inbox/events/{eventId}` 로 확인하세요.
 
+#### curl 예시
+
+서명은 `X-Timestamp`와 요청 바디를 합쳐 생성합니다. `openssl`로 즉석에서 계산할 수 있습니다.
+
+```bash
+SECRET="your-secret-key-replace-this-32chars"
+BODY='{"accountKey":"user-account-123","eventType":"EMAIL_FORWARDING_CHANGED","data":{"email":"new@example.com"}}'
+TS=$(date +%s)
+SIG=$(echo -n "${TS}.${BODY}" | openssl dgst -sha256 -hmac "${SECRET}" | awk '{print $2}')
+
+curl -s -X POST http://localhost:8080/webhooks/account-changes \
+  -H "Content-Type: application/json" \
+  -H "X-Event-Id: evt-001" \
+  -H "X-Timestamp: ${TS}" \
+  -H "X-Signature: ${SIG}" \
+  -d "${BODY}"
+```
+
+이벤트 타입별 바디 예시:
+
+```bash
+# ACCOUNT_DELETED
+BODY='{"accountKey":"user-account-123","eventType":"ACCOUNT_DELETED","data":{}}'
+
+# APPLE_ACCOUNT_DELETED
+BODY='{"accountKey":"user-account-123","eventType":"APPLE_ACCOUNT_DELETED","data":{}}'
+```
+
 ---
 
 ### GET `/accounts/{accountKey}`
@@ -152,6 +180,12 @@ GET /accounts/user-account-123
 | `APPLE_DELETED` | Apple 계정 삭제됨 |
 
 계정이 없으면 `404 Not Found`를 반환합니다.
+
+#### curl 예시
+
+```bash
+curl -s http://localhost:8080/accounts/user-account-123
+```
 
 ---
 
@@ -186,6 +220,12 @@ GET /inbox/events/evt-001
 | `FAILED` | 처리 실패 (`errorMessage` 에 원인 기록) |
 
 이벤트가 없으면 `404 Not Found`를 반환합니다.
+
+#### curl 예시
+
+```bash
+curl -s http://localhost:8080/inbox/events/evt-001
+```
 
 ---
 
