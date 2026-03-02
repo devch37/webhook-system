@@ -4,9 +4,9 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing
+import org.sqlite.SQLiteConfig
 import org.sqlite.SQLiteDataSource
 import javax.sql.DataSource
-import org.sqlite.SQLiteConfig
 
 @Configuration
 @EnableJpaAuditing

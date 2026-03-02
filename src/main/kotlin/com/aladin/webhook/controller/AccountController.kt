@@ -22,5 +22,3 @@ class AccountController(
         return ResponseEntity.ok(account.toResponse())
     }
 }
-
-
