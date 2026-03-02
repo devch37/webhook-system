@@ -21,7 +21,7 @@ class AccountRepository(
         email: String,
     ) {
         val account = accountJpaRepository.findByAccountKey(accountKey) ?: return
-        accountJpaRepository.save(account.copy(email = email))
+        account.email = email
     }
 
     fun updateStatus(
@@ -29,6 +29,6 @@ class AccountRepository(
         status: AccountStatus,
     ) {
         val account = accountJpaRepository.findByAccountKey(accountKey) ?: return
-        accountJpaRepository.save(account.copy(status = status))
+        account.status = status
     }
 }

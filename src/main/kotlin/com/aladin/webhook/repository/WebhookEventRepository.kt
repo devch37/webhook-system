@@ -26,7 +26,7 @@ class WebhookEventRepository(
         status: EventStatus,
     ) {
         val event = webhookEventJpaRepository.findByEventId(eventId) ?: return
-        webhookEventJpaRepository.save(event.copy(status = status))
+        event.status = status
     }
 
     @Transactional
@@ -35,6 +35,7 @@ class WebhookEventRepository(
         reason: String,
     ) {
         val event = webhookEventJpaRepository.findByEventId(eventId) ?: return
-        webhookEventJpaRepository.save(event.copy(status = EventStatus.FAILED, errorMessage = reason.take(1000)))
+        event.status = EventStatus.FAILED
+        event.errorMessage = reason.take(1000)
     }
 }

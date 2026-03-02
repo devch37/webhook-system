@@ -195,8 +195,19 @@ jacoco 로 테스트 커버리지 확인시에 조금 더 커버리지를 높일
 
 ---
 
+## #20 Entity data class 를 class 로 변경 요청
+**프롬프트**
+```
+혹시 jpa entity 를 data class 가  아닌 class 를 사용하는게 나을 것 같아서 class 로 변경해줘 ! 
+```
 
+---
 
+## #21 Repository update 메서드 save 삭제 요청
+**프롬프트**
+```
+혹시 Repository 코드들 보면 update 들 메서드들을 보면 save 가 있는데 Transation 이 끝나면 변경 된 값은 dirty checking 으로 반영 되어서 save 가 필요없지 않을까 ? 
+```
 
 
 

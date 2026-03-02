@@ -12,7 +12,7 @@ import jakarta.persistence.Table
 
 @Entity
 @Table(name = "webhook_events")
-data class WebhookEvent(
+class WebhookEvent(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     @Column(name = "event_id", unique = true, nullable = false)
@@ -23,7 +23,7 @@ data class WebhookEvent(
     val payload: String,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    val status: EventStatus = EventStatus.RECEIVED,
+    var status: EventStatus = EventStatus.RECEIVED,
     @Column(name = "error_message")
-    val errorMessage: String? = null,
+    var errorMessage: String? = null,
 ) : BaseEntity()

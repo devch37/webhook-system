@@ -12,14 +12,14 @@ import jakarta.persistence.Table
 
 @Entity
 @Table(name = "accounts")
-data class Account(
+class Account(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
     @Column(name = "account_key", unique = true, nullable = false)
     val accountKey: String,
     @Column
-    val email: String? = null,
+    var email: String? = null,
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    val status: AccountStatus = AccountStatus.ACTIVE,
+    var status: AccountStatus = AccountStatus.ACTIVE,
 ) : BaseEntity()
