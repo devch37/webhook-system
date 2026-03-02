@@ -24,6 +24,7 @@
 ### 사전 요구사항
 
 - **JDK 21** 이상
+- 환경 변수 `DB_PATH` , `WEBHOOK_SECRET` , `PORT`
 - `WEBHOOK_SECRET` 환경변수 — **32자 이상** 필수 (미설정 시 서버 시작 즉시 종료)
 
 ### 로컬 실행
@@ -32,6 +33,7 @@
 WEBHOOK_SECRET=your-secret-key-replace-this-value \
 ./gradlew bootRun
 ```
+> WEBHOOK_SECRET 환경 변수 값을 넣지 않으면 default 값 your-secret-key-replace-this-value 으로 입력 됩니다.
 
 ### JAR 빌드 후 실행
 
