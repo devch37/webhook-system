@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing
 import org.sqlite.SQLiteDataSource
 import javax.sql.DataSource
+import org.sqlite.SQLiteConfig
 
 @Configuration
 @EnableJpaAuditing
@@ -25,6 +26,7 @@ class DatabaseConfig {
             }
             this.url = url
             config.apply {
+                transactionMode = SQLiteConfig.TransactionMode.IMMEDIATE
                 busyTimeout = 5000
                 if (isFileDb) {
                     setJournalMode("WAL")
