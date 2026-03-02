@@ -20,25 +20,4 @@ interface WebhookEventJpaRepository : JpaRepository<WebhookEvent, Long> {
         @Param("eventType") eventType: String,
         @Param("payload") payload: String,
     ): Int
-
-    @Modifying(clearAutomatically = true)
-    @Query(
-        value = "UPDATE webhook_events SET status = :status, updated_at = strftime('%Y-%m-%d %H:%M:%S','now') WHERE event_id = :eventId",
-        nativeQuery = true,
-    )
-    fun updateStatus(
-        @Param("eventId") eventId: String,
-        @Param("status") status: String,
-    )
-
-    @Modifying(clearAutomatically = true)
-    @Query(
-        value =
-            "UPDATE webhook_events SET status = 'FAILED', error_message = :reason, updated_at = strftime('%Y-%m-%d %H:%M:%S','now') WHERE event_id = :eventId",
-        nativeQuery = true,
-    )
-    fun updateFailed(
-        @Param("eventId") eventId: String,
-        @Param("reason") reason: String,
-    )
 }

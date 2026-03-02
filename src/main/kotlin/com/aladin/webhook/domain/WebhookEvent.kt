@@ -9,8 +9,6 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import org.hibernate.annotations.UpdateTimestamp
-import java.time.LocalDateTime
 
 @Entity
 @Table(name = "webhook_events")
@@ -28,9 +26,4 @@ data class WebhookEvent(
     val status: EventStatus = EventStatus.RECEIVED,
     @Column(name = "error_message")
     val errorMessage: String? = null,
-    @Column(name = "created_at", insertable = false, updatable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now(),
-    @UpdateTimestamp
-    @Column(name = "updated_at", insertable = false)
-    val updatedAt: LocalDateTime = LocalDateTime.now(),
-)
+) : BaseEntity()

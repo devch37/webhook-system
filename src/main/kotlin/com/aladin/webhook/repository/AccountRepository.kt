@@ -19,10 +19,16 @@ class AccountRepository(
     fun updateEmail(
         accountKey: String,
         email: String,
-    ) = accountJpaRepository.updateEmail(accountKey, email)
+    ) {
+        val account = accountJpaRepository.findByAccountKey(accountKey) ?: return
+        accountJpaRepository.save(account.copy(email = email))
+    }
 
     fun updateStatus(
         accountKey: String,
         status: AccountStatus,
-    ) = accountJpaRepository.updateStatus(accountKey, status.name)
+    ) {
+        val account = accountJpaRepository.findByAccountKey(accountKey) ?: return
+        accountJpaRepository.save(account.copy(status = status))
+    }
 }

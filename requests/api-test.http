@@ -143,7 +143,6 @@ Content-Type: application/json
 X-Signature: {{sig}}
 X-Event-Id: {{$uuid}}
 
-this is not valid json!!!
 
 > {%
     client.test("400 Bad Request", () => client.assert(response.status === 400, `status: ${response.status}`));

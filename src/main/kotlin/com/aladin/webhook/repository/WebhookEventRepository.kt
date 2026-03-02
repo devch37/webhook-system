@@ -24,11 +24,17 @@ class WebhookEventRepository(
     fun updateStatus(
         eventId: String,
         status: EventStatus,
-    ) = webhookEventJpaRepository.updateStatus(eventId, status.name)
+    ) {
+        val event = webhookEventJpaRepository.findByEventId(eventId) ?: return
+        webhookEventJpaRepository.save(event.copy(status = status))
+    }
 
     @Transactional
     fun updateFailed(
         eventId: String,
         reason: String,
-    ) = webhookEventJpaRepository.updateFailed(eventId, reason.take(1000))
+    ) {
+        val event = webhookEventJpaRepository.findByEventId(eventId) ?: return
+        webhookEventJpaRepository.save(event.copy(status = EventStatus.FAILED, errorMessage = reason.take(1000)))
+    }
 }

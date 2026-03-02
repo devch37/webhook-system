@@ -9,8 +9,8 @@ CREATE TABLE accounts (
     email        TEXT,
     status       TEXT    NOT NULL DEFAULT 'ACTIVE'
                          CHECK(status IN ('ACTIVE','DELETED','APPLE_DELETED')),
-    created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+    updated_at   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
 );
 
 CREATE TABLE webhook_events (
@@ -21,8 +21,8 @@ CREATE TABLE webhook_events (
     status        TEXT    NOT NULL DEFAULT 'RECEIVED'
                           CHECK(status IN ('RECEIVED','PROCESSING','DONE','FAILED')),
     error_message TEXT,
-    created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now')),
+    updated_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_webhook_events_status ON webhook_events(status);
