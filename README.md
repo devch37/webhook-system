@@ -46,7 +46,7 @@ java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 
 | 변수명 | 필수 | 기본값 | 설명 |
 |--------|------|--------|------|
-| `WEBHOOK_SECRET` | ✅ | — | HMAC-SHA256 서명 시크릿 (32자 이상) |
+| `WEBHOOK_SECRET` | ❌ | — | your-secret-key-replace-this-value |
 | `DB_PATH` | ❌ | `./data/webhook.db` | SQLite DB 파일 경로 |
 | `PORT` | ❌ | `8080` | 서버 포트 |
 
