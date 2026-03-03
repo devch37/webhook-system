@@ -1,4 +1,4 @@
-package be.com.webhook
+package com.aladin.webhook
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class WebhookApplication
 
 fun main(args: Array<String>) {
-	runApplication<WebhookApplication>(*args)
+    runApplication<WebhookApplication>(*args)
 }

@@ -29,7 +29,6 @@ out/
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
 
@@ -38,3 +37,11 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### Security ###
+.env
+*.db
+data/
+
+# SQLite In-memory artifacts
+:memory:*
