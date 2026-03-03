@@ -29,7 +29,6 @@ out/
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
 
@@ -43,3 +42,6 @@ out/
 .env
 *.db
 data/
+
+# SQLite In-memory artifacts
+:memory:*

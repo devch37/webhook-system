@@ -48,11 +48,35 @@ WEBHOOK_SECRET=your-secret-key-replace-this-value \
 java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 ```
 
+### Docker 실행 (권장)
+
+Docker만 설치되어 있으면 JDK 없이 한 번에 빌드 및 실행할 수 있습니다.
+
+```bash
+# 이미지 빌드 (프로젝트 루트에서 실행)
+docker build -f dist/Dockerfile -t webhook .
+
+# 컨테이너 실행
+docker run -p 8080:8080 \
+  -e WEBHOOK_SECRET=my-super-secret-key-32chars-long \
+  -v "$(pwd)/data:/app/data" \
+  webhook
+
+# 백그라운드 실행
+docker run -d -p 8080:8080 \
+  -e WEBHOOK_SECRET=my-super-secret-key-32chars-long \
+  -v "$(pwd)/data:/app/data" \
+  --name webhook \
+  webhook
+```
+
+> SQLite DB 파일은 **`./data/webhook.db`** 에 저장되며 컨테이너를 재시작해도 유지됩니다.
+
 ### 환경변수
 
 | 변수명 | 필수 | 기본값 | 설명 |
 |--------|------|--------|------|
-| `WEBHOOK_SECRET` | ❌ | — | your-secret-key-replace-this-value |
+| `WEBHOOK_SECRET` | ❌ | `your-secret-key-replace-this-value` | HMAC-SHA256 서명 시크릿 |
 | `DB_PATH` | ❌ | `./data/webhook.db` | SQLite DB 파일 경로 |
 | `PORT` | ❌ | `8080` | 서버 포트 |
 
