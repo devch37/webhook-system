@@ -53,18 +53,19 @@ java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 Docker만 설치되어 있으면 JDK 없이 한 번에 빌드 및 실행할 수 있습니다.
 
 ```bash
-# 이미지 빌드 (프로젝트 루트에서 실행)
+# 1. 이미지 빌드 (프로젝트 루트에서 실행)
 docker build -f dist/Dockerfile -t webhook .
 
-# 컨테이너 실행
-docker run -p 8080:8080 \
-  -e WEBHOOK_SECRET=my-super-secret-key-32chars-long \
-  -v "$(pwd)/data:/app/data" \
-  webhook
-
-# 백그라운드 실행
+# 2. 백그라운드 실행
 docker run -d -p 8080:8080 \
-  -e WEBHOOK_SECRET=my-super-secret-key-32chars-long \
+  -e WEBHOOK_SECRET=your-secret-key-replace-this-value \
+  -v "$(pwd)/data:/app/data" \
+  --name webhook \
+  webhook
+  
+or 
+  
+docker run -d -p 8080:8080 \
   -v "$(pwd)/data:/app/data" \
   --name webhook \
   webhook
