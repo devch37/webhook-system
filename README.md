@@ -25,13 +25,17 @@
 
 - **JDK 21** 이상
 - 환경 변수 `DB_PATH` , `WEBHOOK_SECRET` , `PORT`
-- `WEBHOOK_SECRET` 환경변수 — **32자 이상** 필수 (미설정 시 서버 시작 즉시 종료)
+- `WEBHOOK_SECRET` 환경변수 — **32자 이상** 필수 or Default 값으로 설정 됨 (your-secret-key-replace-this-value)
 
 ### 로컬 실행
 
 ```bash
-WEBHOOK_SECRET=your-secret-key-replace-this-value \
+WEBHOOK_SECRET={32 자 이상 Secret key 입력} \
 ./gradlew bootRun
+
+or 
+
+./gradlew bootRun 
 ```
 > WEBHOOK_SECRET 환경 변수 값을 넣지 않으면 default 값 your-secret-key-replace-this-value 으로 입력 됩니다.
 
