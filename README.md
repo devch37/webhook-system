@@ -30,7 +30,7 @@
 ### 로컬 실행
 
 ```bash
-WEBHOOK_SECRET={32 자 이상 Secret key 입력} \
+WEBHOOK_SECRET=your-secret-key-replace-this-value \
 ./gradlew bootRun
 
 or 
