@@ -48,9 +48,7 @@ WEBHOOK_SECRET=your-secret-key-replace-this-value \
 java -jar build/libs/webhook-0.0.1-SNAPSHOT.jar
 ```
 
-### Docker 실행 (권장)
-
-Docker만 설치되어 있으면 JDK 없이 한 번에 빌드 및 실행할 수 있습니다.
+### Docker 실행
 
 ```bash
 # 1. 이미지 빌드 (프로젝트 루트에서 실행)
