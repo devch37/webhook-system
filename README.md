@@ -24,7 +24,7 @@
 ### 사전 요구사항
 
 - **JDK 21** 이상
-- 환경 변수 `DB_PATH` , `WEBHOOK_SECRET` , `PORT`
+- 환경 변수 `DB_PATH`,`WEBHOOK_SECRET`,`PORT`
 - `WEBHOOK_SECRET` 환경변수 — **32자 이상** 필수 or Default 값으로 설정 됨 (your-secret-key-replace-this-value)
 
 ### 로컬 실행
